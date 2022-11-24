@@ -2,7 +2,7 @@ import produce, { enablePatches } from 'immer'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
-import { db, dbRef, dbSet } from './firebase'
+import { dbSet } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
@@ -287,12 +287,13 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     )
   }
 
-  const onTouch = (type: InputState['type']) => () => {
+  const onTouch = (type: InputState['type']) => async () => {
     const timestamp = Date.now()
     const id = `${myID}:${timestamp}`
+
     handleInput({ id, targetID: myID, timestamp, type })
-    const ref = dbRef(db, `inputs/${id}`)
-    dbSet(ref, { id, targetID: myID, timestamp, type })
+
+    await dbSet(`inputs/${id}`, { id, targetID: myID, timestamp, type })
   }
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />

@@ -1,9 +1,8 @@
-import './firebase'
 import ReactDOM from 'react-dom/client'
 import { Toaster } from 'react-hot-toast'
-import App from './ZzApp'
 import ErrorBoundary from './ErrorBoundary'
 import './index.css'
+import App from './ZzApp'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <>
