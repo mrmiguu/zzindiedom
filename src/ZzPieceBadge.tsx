@@ -17,7 +17,7 @@ function PieceBadge({ sprite, spriteHueShiftDeg, size, onClick, children }: Piec
     <div className={`relative ${sizeCls} ${onClick && 'pointer-events-auto cursor-pointer'}`} onClick={onClick}>
       <div className="absolute bottom-0 w-full h-full overflow-hidden border border-white rounded-full w- bg-black/30" />
 
-      <div className="absolute flex items-end justify-center w-full h-[999%] bottom-0 overflow-hidden border-b-2 border-white rounded-full">
+      <div className="absolute flex items-end justify-center w-full h-[999%] bottom-0 overflow-hidden border-b-2 border-white rounded-full pointer-events-none">
         <div
           className={`${
             size === 12 ? 'text-[48px]' : size === 16 ? 'text-[64px]' : size === 20 ? 'text-[80px]' : 'text-[96px]'

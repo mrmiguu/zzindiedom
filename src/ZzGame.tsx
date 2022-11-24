@@ -6,6 +6,7 @@ import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
 import { max, min, pickRandom, random, values } from './utils'
+import ChatDrawer from './ZzChatDrawer'
 import LRScreen from './ZzLRScreen'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, PlayerSprite, playerSprites } from './ZzSprites'
@@ -135,7 +136,7 @@ function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   const startAI = useCallback((targetID: string) => {
     const msRandom = () => 1000 * (2 + (5 - 2) * random())
 
-    let timeoutID = 0
+    let timeoutID: NodeJS.Timeout
 
     const ai = () => {
       timeoutID = setTimeout(ai, msRandom())
@@ -216,21 +217,31 @@ function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     </div>
   )
 
+  const [showChatDrawer, setShowChatDrawer] = useState(false)
+  const chatDrawerLayer = (
+    <div
+      className={`absolute flex items-end justify-center w-full h-full overflow-hidden ${
+        showChatDrawer ? 'cursor-pointer' : 'pointer-events-none'
+      }`}
+      onClick={() => setShowChatDrawer(false)}
+    >
+      <div className="relative w-full transition-transform ease-linear" onClick={e => e.stopPropagation()}>
+        {showChatDrawer && (
+          <ChatDrawer
+            onSubmit={({ msg }) => {
+              sendChat(mySprite, mySpriteHueShiftDeg, myName, msg)
+            }}
+            onEsc={() => setShowChatDrawer(false)}
+          />
+        )}
+      </div>
+    </div>
+  )
+
   const sideButtonsLayer = (
     <div className="absolute flex items-end justify-end w-full h-full pointer-events-none">
       <div className="flex flex-col gap-3 px-4 py-20 text-4xl">
-        <button
-          className="pointer-events-auto"
-          onClick={() => {
-            sendChat(
-              mySprite,
-              mySpriteHueShiftDeg,
-              myName,
-              'hey there my name alex im new can some1 help me start playing',
-              // 'sure',
-            )
-          }}
-        >
+        <button className="pointer-events-auto" onClick={() => setShowChatDrawer(true)}>
           💬
         </button>
       </div>
@@ -298,6 +309,7 @@ function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
       {LRtouchLayer}
       {badgesLayer}
       {sideButtonsLayer}
+      {chatDrawerLayer}
     </div>
   )
 }
