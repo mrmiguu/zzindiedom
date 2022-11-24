@@ -2,6 +2,7 @@ import produce, { enablePatches } from 'immer'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
+import { db, dbRef, dbSet } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
@@ -16,12 +17,13 @@ import { GameState, InputHistory, InputState, PieceState } from './ZzTypes'
 enablePatches()
 
 type GameProps = {
+  myID: string
   myName: string
   mySprite: PlayerSprite
   mySpriteHueShiftDeg: number
 }
 
-function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
+function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   const perspective = 1024
   const cameraAngle = 75
   const tiles = 64
@@ -33,9 +35,6 @@ function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   const bgLayer = (
     <div className="absolute w-full h-full bg-gradient-to-b from-[#36D6ED] to-[#C8F6FF] pointer-events-none" />
   )
-
-  const mySeed = useMemo(() => random(), [myName])
-  const myID = `${myName}:${mySeed}`
 
   const cpuIDs = useMemo(() => [...Array(~~(tiles * 0.2))].map((_, i) => `cpu${`${i}`.padStart(3, '0')}`), [tiles])
 
@@ -292,6 +291,8 @@ function Game({ myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     const timestamp = Date.now()
     const id = `${myID}:${timestamp}`
     handleInput({ id, targetID: myID, timestamp, type })
+    const ref = dbRef(db, `inputs/${id}`)
+    dbSet(ref, { id, targetID: myID, timestamp, type })
   }
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />

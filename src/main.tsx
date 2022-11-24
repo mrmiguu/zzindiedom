@@ -1,6 +1,7 @@
+import './firebase'
 import ReactDOM from 'react-dom/client'
 import { Toaster } from 'react-hot-toast'
-import App from './App'
+import App from './ZzApp'
 import ErrorBoundary from './ErrorBoundary'
 import './index.css'
 

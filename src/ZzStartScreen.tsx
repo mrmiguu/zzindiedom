@@ -2,6 +2,8 @@ import produce from 'immer'
 import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import useAsync from 'react-use/lib/useAsync'
+import { auth, signInAnonymously } from './firebase'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
 import { error, log, random, stringify } from './utils'
@@ -14,6 +16,7 @@ const shuffledPlayerSprites = produce<readonly PlayerSprite[]>(playerSprites, pl
 })
 
 type FormData = {
+  userID: string
   playerName: string
   sprite: PlayerSprite
   hueShiftDeg: number
@@ -24,7 +27,14 @@ type StartScreenProps = {
 }
 
 function StartScreen({ onSubmit }: StartScreenProps) {
+  const [userID, setUserID] = useState<string | null>(null)
   const { register, handleSubmit, control } = useForm<FormData>()
+
+  useAsync(async () => {
+    const { user } = await signInAnonymously(auth)
+    log(`You signed in (${user.uid})`)
+    setUserID(user.uid)
+  }, [])
 
   const generateRandomHueShiftDeg = () => 360 * random()
   const [hueShiftDeg, setHueShiftDeg] = useState(generateRandomHueShiftDeg())
@@ -160,9 +170,12 @@ function StartScreen({ onSubmit }: StartScreenProps) {
 
   const startButton = (
     <button
-      className="px-4 py-2 bg-white rounded animate-breathe hover:opacity-90 active:animate-ping"
+      className={`px-4 py-2 bg-white rounded active:animate-ping ${
+        userID ? 'animate-breathe hover:opacity-90' : 'contrast-50'
+      }`}
       onMouseDown={e => sounds.button.then(s => s.play())}
       type="submit"
+      disabled={!userID}
     >
       ▷ Start
     </button>
@@ -198,7 +211,7 @@ function StartScreen({ onSubmit }: StartScreenProps) {
   )
 
   return (
-    <form className="font-mono" onSubmit={handleSubmit(props => onSubmit({ ...props, hueShiftDeg }))}>
+    <form className="font-mono" onSubmit={handleSubmit(props => onSubmit({ ...props, hueShiftDeg, userID: userID! }))}>
       {bgColor}
       {bgTexture}
       {ui}

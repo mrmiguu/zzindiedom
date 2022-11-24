@@ -2,7 +2,7 @@ import { Howl } from 'howler'
 import { useEffect, useState } from 'react'
 import { useAsync } from 'react-use'
 import { useVisibilityChange } from './hooks'
-import { coordinatedUniversalMilliseconds, log, stringify, unpackDynamicImport } from './utils'
+import { coordinatedUniversalMilliseconds, unpackDynamicImport } from './utils'
 
 const musicImports = import.meta.glob<{ default: string }>('./music/**/*')
 
@@ -119,27 +119,27 @@ function useUTCMusic() {
     else howlCurrentTrack.stop()
   }, [howlCurrentTrack, musicUnlocked, musicLoaded, visibility])
 
-  log(
-    stringify(
-      {
-        musicUnlocked,
-        musicLoaded,
-        restartMusic,
-        musicDuration,
-        musicSyncTimeData,
-        musicStartTime,
-        musicPaused,
-        musicError,
-        musicEnd,
-        musicFade,
-        musicStop,
-        musicMute,
-        musicVolume,
-      },
-      null,
-      2,
-    ),
-  )
+  // log(
+  //   stringify(
+  //     {
+  //       musicUnlocked,
+  //       musicLoaded,
+  //       restartMusic,
+  //       musicDuration,
+  //       musicSyncTimeData,
+  //       musicStartTime,
+  //       musicPaused,
+  //       musicError,
+  //       musicEnd,
+  //       musicFade,
+  //       musicStop,
+  //       musicMute,
+  //       musicVolume,
+  //     },
+  //     null,
+  //     2,
+  //   ),
+  // )
 }
 
 export { useUTCMusic, setUTCSong, currentUTCSong }

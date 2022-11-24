@@ -8,6 +8,7 @@ import StartScreen from './ZzStartScreen'
 function App() {
   const [appState, setAppState] = useState<'start' | 'game'>('start')
   const [me, setMe] = useState<{
+    id: string
     name: string
     sprite: PlayerSprite
     spriteHueShiftDeg: number
@@ -17,18 +18,20 @@ function App() {
 
   switch (appState) {
     case 'game': {
-      return me ? <Game myName={me.name} mySprite={me.sprite} mySpriteHueShiftDeg={me.spriteHueShiftDeg} /> : null
+      return me ? (
+        <Game myID={me.id} myName={me.name} mySprite={me.sprite} mySpriteHueShiftDeg={me.spriteHueShiftDeg} />
+      ) : null
     }
     case 'start': {
       return (
         <StartScreen
-          onSubmit={({ playerName, sprite, hueShiftDeg }) => {
+          onSubmit={({ userID, playerName, sprite, hueShiftDeg }) => {
             toast(
               <div>
                 You ({playerName}) picked <span style={{ filter: `hue-rotate(${hueShiftDeg}deg)` }}>{sprite}</span>
               </div>,
             )
-            setMe({ name: playerName, sprite, spriteHueShiftDeg: hueShiftDeg })
+            setMe({ id: userID, name: playerName, sprite, spriteHueShiftDeg: hueShiftDeg })
             setAppState('game')
           }}
         />
