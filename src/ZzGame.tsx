@@ -1,10 +1,9 @@
-import { diff } from 'deep-object-diff'
 import produce, { enablePatches } from 'immer'
-import { Reducer, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { Reducer, useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
 
-import { dbListen, dbPush, dbRef, dbSet } from './firebase'
+import { dbPush } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
@@ -16,15 +15,12 @@ import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, PlayerSprite, playerSprites } from './ZzSprites'
 import TileCarousel from './ZzTileCarousel'
 import {
-  DB_AddPlayerEvents,
   EventAddPlayer,
+  EventPlayerChat,
   EventPlayerInput,
   EventRemovePlayer,
   GameEvent,
   GameState,
-  GAME_EVENT_TYPES,
-  InputHistory,
-  InputState,
   PieceState,
 } from './ZzTypes'
 
@@ -42,6 +38,8 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   const perspective = 1024
   const cameraAngle = 75
   const tiles = 64
+
+  const windowSize = useWindowSize(innerWidth, innerHeight)
 
   const cpuIDs = useMemo(
     () =>
@@ -92,6 +90,27 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     )
   }, [sceneryIDs, tiles, mapID])
 
+  const sendChat = (uid: string, sprite: string, spriteHueShiftDeg: number, name: string, msg: string) => {
+    const wordsPerSec = 2
+    const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
+
+    const myMsg = uid === myID
+
+    const width = 222
+    const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
+    const translateX = myMsg ? windowSize.width / 2 - width / 2 - 64 : -windowSize.width / 2 + width / 2 + 16
+
+    toast(
+      <div
+        className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-xs`}
+        style={{ width, transform: `translate(${translateX}px)` }}
+      >
+        <span style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}>{sprite}</span> {name}: {msg}
+      </div>,
+      { className: 'bg-transparent drop-shadow-none shadow-none', duration },
+    )
+  }
+
   const [gameState, fireLocalGameEvent] = useReducer<Reducer<GameState, GameEvent>>(
     (state, event) => {
       switch (event.type) {
@@ -139,9 +158,16 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
               // delete state.pieces[id]
             }
           })
+
+        case 'player_chat':
+          sendChat(event.uid, event.sprite, event.hueRotate, event.name, event.msg)
+          break
+
         default:
           throw new Error()
       }
+
+      return state
     },
     {
       pieces: {
@@ -157,6 +183,12 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
       updatedAt: 0,
     },
   )
+
+  useDBGameEvents<EventAddPlayer>('add_player', fireLocalGameEvent)
+  useDBGameEvents<EventRemovePlayer>('remove_player', fireLocalGameEvent)
+  useDBGameEvents<EventPlayerInput>('player_input', fireLocalGameEvent)
+  useDBGameEvents<EventPlayerChat>('player_chat', fireLocalGameEvent)
+
   const fireGlobalGameEvent = async (event: GameEvent) => {
     fireLocalGameEvent(event)
     await dbPush(event.type, event)
@@ -177,34 +209,11 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     }
   }, [myID, myName, mySprite, mySpriteHueShiftDeg])
 
-  const windowSize = useWindowSize(innerWidth, innerHeight)
-
   setUTCSong('LEMON_CAKE')
 
   const bgLayer = (
     <div className="absolute w-full h-full bg-gradient-to-b from-[#36D6ED] to-[#C8F6FF] pointer-events-none" />
   )
-
-  const sendChat = (uid: string, sprite: PlayerSprite, spriteHueShiftDeg: number, name: string, msg: string) => {
-    const wordsPerSec = 2
-    const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
-
-    const myMsg = uid === myID
-
-    const width = 222
-    const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
-    const translateX = myMsg ? windowSize.width / 2 - width / 2 - 64 : -windowSize.width / 2 + width / 2 + 16
-
-    toast(
-      <div
-        className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-xs`}
-        style={{ width, transform: `translate(${translateX}px)` }}
-      >
-        <span style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}>{sprite}</span> {name}: {msg}
-      </div>,
-      { className: 'bg-transparent drop-shadow-none shadow-none', duration },
-    )
-  }
 
   const startAI = useCallback(
     (aiID: string) => {
@@ -301,7 +310,14 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
         {showChatDrawer && (
           <ChatDrawer
             onSubmit={({ msg }) => {
-              sendChat(myID, mySprite, mySpriteHueShiftDeg, myName, msg)
+              fireGlobalGameEvent({
+                type: 'player_chat',
+                uid: myID,
+                sprite: mySprite,
+                hueRotate: mySpriteHueShiftDeg,
+                name: myName,
+                msg,
+              })
             }}
             onEsc={() => setShowChatDrawer(false)}
           />
@@ -319,29 +335,6 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
       </div>
     </div>
   )
-
-  useDBGameEvents<EventAddPlayer>('add_player', event => {
-    fireLocalGameEvent({
-      type: event.type,
-      uid: event.uid,
-      name: event.name,
-      sprite: event.sprite,
-      hueRotate: event.hueRotate,
-    })
-  })
-  useDBGameEvents<EventPlayerInput>('player_input', event => {
-    fireLocalGameEvent({
-      type: event.type,
-      uid: event.uid,
-      dir: event.dir,
-    })
-  })
-  useDBGameEvents<EventRemovePlayer>('remove_player', event => {
-    fireLocalGameEvent({
-      type: event.type,
-      uid: event.uid,
-    })
-  })
 
   const onTouch = (dir: EventPlayerInput['dir']) => async () => {
     fireGlobalGameEvent({ type: 'player_input', uid: myID, dir })
