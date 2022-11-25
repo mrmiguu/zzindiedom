@@ -1,18 +1,32 @@
+import { diff } from 'deep-object-diff'
 import produce, { enablePatches } from 'immer'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Reducer, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
-import { dbSet } from './firebase'
+
+import { dbListen, dbPush, dbRef, dbSet } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
 import { max, min, pickRandom, random, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
+import { useDBGameEvents } from './ZzDB'
 import LRScreen from './ZzLRScreen'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, PlayerSprite, playerSprites } from './ZzSprites'
 import TileCarousel from './ZzTileCarousel'
-import { GameState, InputHistory, InputState, PieceState } from './ZzTypes'
+import {
+  DB_AddPlayerEvents,
+  EventAddPlayer,
+  EventPlayerInput,
+  EventRemovePlayer,
+  GameEvent,
+  GameState,
+  GAME_EVENT_TYPES,
+  InputHistory,
+  InputState,
+  PieceState,
+} from './ZzTypes'
 
 enablePatches()
 
@@ -24,9 +38,144 @@ type GameProps = {
 }
 
 function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
+  const mapID = 'carousel001'
   const perspective = 1024
   const cameraAngle = 75
   const tiles = 64
+
+  const cpuIDs = useMemo(
+    () =>
+      [
+        /* ...Array(~~(tiles * 0.2)) */
+      ].map((_, i) => `cpu${`${i}`.padStart(3, '0')}`),
+    [tiles],
+  )
+
+  const sceneryIDs = useMemo(
+    () => [...Array(~~(tiles * 0.2))].map((_, i) => `scenery${`${i}`.padStart(3, '0')}`),
+    [tiles],
+  )
+
+  const cpuPieces = useMemo(() => {
+    const seed = `${mapID}:cpuPieces`
+
+    return cpuIDs.reduce<{ [id: string]: PieceState }>(
+      (pieces, id) => ({
+        ...pieces,
+        [id]: {
+          id,
+          sprite: pickRandom(playerSprites, { seed }),
+          spriteHueShiftDeg: 360 * random({ seed }),
+          i: ~~(tiles * random({ seed })),
+          iTimestamp: 0,
+        },
+      }),
+      {},
+    )
+  }, [cpuIDs, tiles, mapID])
+
+  const sceneryPieces = useMemo(() => {
+    const seed = `${mapID}:sceneryPieces`
+
+    return sceneryIDs.reduce<{ [id: string]: PieceState }>(
+      (pieces, id) => ({
+        ...pieces,
+        [id]: {
+          id,
+          sprite: pickRandom(cityScenerySprites, { seed }),
+          spriteHueShiftDeg: 0,
+          i: 1 + ~~((tiles - 1) * random({ seed })),
+          static: random({ seed }) < 0.5 ? 'background' : 'foreground',
+        },
+      }),
+      {},
+    )
+  }, [sceneryIDs, tiles, mapID])
+
+  const [gameState, fireLocalGameEvent] = useReducer<Reducer<GameState, GameEvent>>(
+    (state, event) => {
+      switch (event.type) {
+        case 'add_player':
+          return produce(state, state => {
+            state.pieces[event.uid] = {
+              id: event.uid,
+              name: event.name,
+              level: 1,
+              sprite: event.sprite,
+              spriteHueShiftDeg: event.hueRotate,
+              i: 0,
+              iTimestamp: 0,
+            }
+          })
+
+        case 'remove_player':
+          return produce(state, state => {
+            delete state.pieces[event.uid]
+          })
+
+        case 'player_input':
+          return produce(state, state => {
+            const target = state.pieces[event.uid]
+            if (!target) return
+
+            if (event.type === 'player_input') {
+              if (event.dir === 'L') {
+                sounds.dash.then(s => s.play())
+                target.i--
+                target.iTimestamp = Date.now()
+              }
+              if (event.dir === 'R') {
+                sounds.dash.then(s => s.play())
+                target.i++
+                target.iTimestamp = Date.now()
+              }
+            }
+
+            for (const id in state.pieces) {
+              const piece = state.pieces[id]!
+              if (piece.id === target.id) continue
+              if (clampN(piece.i, tiles) !== clampN(target.i, tiles)) continue
+              // toast('💥')
+              // delete state.pieces[id]
+            }
+          })
+        default:
+          throw new Error()
+      }
+    },
+    {
+      pieces: {
+        ...cpuPieces,
+        ...sceneryPieces,
+        warp001: {
+          id: 'warp001',
+          i: 2,
+          static: 'foreground',
+          className: 'w-16 h-20 rounded-full border border-yellow-500 bg-blue-500/50 animate-pulse',
+        },
+      },
+      updatedAt: 0,
+    },
+  )
+  const fireGlobalGameEvent = async (event: GameEvent) => {
+    fireLocalGameEvent(event)
+    await dbPush(event.type, event)
+  }
+
+  const { pieces } = gameState
+
+  useEffect(() => {
+    fireGlobalGameEvent({
+      type: 'add_player',
+      uid: myID,
+      name: myName,
+      sprite: mySprite,
+      hueRotate: mySpriteHueShiftDeg,
+    })
+    return () => {
+      fireGlobalGameEvent({ type: 'remove_player', uid: myID })
+    }
+  }, [myID, myName, mySprite, mySpriteHueShiftDeg])
 
   const windowSize = useWindowSize(innerWidth, innerHeight)
 
@@ -36,60 +185,11 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     <div className="absolute w-full h-full bg-gradient-to-b from-[#36D6ED] to-[#C8F6FF] pointer-events-none" />
   )
 
-  const cpuIDs = useMemo(() => [...Array(~~(tiles * 0.2))].map((_, i) => `cpu${`${i}`.padStart(3, '0')}`), [tiles])
-
-  const sceneryIDs = useMemo(
-    () => [...Array(~~(tiles * 0.2))].map((_, i) => `scenery${`${i}`.padStart(3, '0')}`),
-    [tiles],
-  )
-
-  const cpuPieces = useMemo(
-    () =>
-      cpuIDs.reduce<{ [id: string]: PieceState }>(
-        (pieces, id) => ({
-          ...pieces,
-          [id]: {
-            id,
-            sprite: pickRandom(playerSprites),
-            spriteHueShiftDeg: 360 * random(),
-            i: 2, //~~(tiles * random()),
-            iTimestamp: 0,
-          },
-        }),
-        {},
-      ),
-    [cpuIDs, tiles],
-  )
-
-  const sceneryPieces = useMemo(
-    () =>
-      sceneryIDs.reduce<{ [id: string]: PieceState }>(
-        (pieces, id) => ({
-          ...pieces,
-          [id]: {
-            id,
-            sprite: pickRandom(cityScenerySprites),
-            spriteHueShiftDeg: 0,
-            i: ~~(tiles * random()),
-            static: random() < 0.5 ? 'background' : 'foreground',
-          },
-        }),
-        {},
-      ),
-    [sceneryIDs, tiles],
-  )
-
-  const [gameState, setGameState] = useState<GameState>({
-    pieces: {},
-    updatedAt: 0,
-  })
-  const { pieces } = gameState
-
-  const sendChat = (sprite: PlayerSprite, spriteHueShiftDeg: number, name: string, msg: string) => {
+  const sendChat = (uid: string, sprite: PlayerSprite, spriteHueShiftDeg: number, name: string, msg: string) => {
     const wordsPerSec = 2
     const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
 
-    const myMsg = random() > 0.65
+    const myMsg = uid === myID
 
     const width = 222
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
@@ -106,50 +206,23 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     )
   }
 
-  useEffect(() => {
-    setGameState(
-      produce(draft => {
-        draft.pieces = {
-          [myID]: {
-            id: myID,
-            name: myName,
-            level: 1,
-            sprite: mySprite,
-            spriteHueShiftDeg: mySpriteHueShiftDeg,
-            i: 0,
-            iTimestamp: 0,
-          },
-          ...cpuPieces,
-          ...sceneryPieces,
-          warp001: {
-            id: 'warp001',
-            i: 2,
-            static: 'foreground',
-            className: 'w-16 h-20 rounded-full border border-yellow-500 bg-blue-500/50 animate-pulse',
-          },
-        }
-      }),
-    )
-  }, [myID, cpuPieces, sceneryPieces])
+  const startAI = useCallback(
+    (aiID: string) => {
+      const seed = `${mapID}:startAI`
 
-  const startAI = useCallback((targetID: string) => {
-    const msRandom = () => 1000 * (2 + (5 - 2) * random())
+      const msRandom = () => 1000 * (2 + (5 - 2) * random({ seed }))
 
-    let timeoutID: NodeJS.Timeout
-
-    const ai = () => {
+      let timeoutID: NodeJS.Timeout
+      const ai = () => {
+        timeoutID = setTimeout(ai, msRandom())
+        fireLocalGameEvent({ type: 'player_input', uid: aiID, dir: random({ seed }) < 0.5 ? 'L' : 'R' })
+      }
       timeoutID = setTimeout(ai, msRandom())
 
-      const timestamp = Date.now()
-      const id = `${targetID}:${timestamp}`
-
-      handleInput({ id, targetID, timestamp, type: random() < 0.5 ? 'L' : 'R' })
-    }
-
-    timeoutID = setTimeout(ai, msRandom())
-
-    return () => clearTimeout(timeoutID)
-  }, [])
+      return () => clearTimeout(timeoutID)
+    },
+    [mapID],
+  )
 
   useEffect(() => {
     cpuIDs.forEach(startAI)
@@ -228,7 +301,7 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
         {showChatDrawer && (
           <ChatDrawer
             onSubmit={({ msg }) => {
-              sendChat(mySprite, mySpriteHueShiftDeg, myName, msg)
+              sendChat(myID, mySprite, mySpriteHueShiftDeg, myName, msg)
             }}
             onEsc={() => setShowChatDrawer(false)}
           />
@@ -247,53 +320,31 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     </div>
   )
 
-  const [inputHistory, setInputHistory] = useState<InputHistory>({})
+  useDBGameEvents<EventAddPlayer>('add_player', event => {
+    fireLocalGameEvent({
+      type: event.type,
+      uid: event.uid,
+      name: event.name,
+      sprite: event.sprite,
+      hueRotate: event.hueRotate,
+    })
+  })
+  useDBGameEvents<EventPlayerInput>('player_input', event => {
+    fireLocalGameEvent({
+      type: event.type,
+      uid: event.uid,
+      dir: event.dir,
+    })
+  })
+  useDBGameEvents<EventRemovePlayer>('remove_player', event => {
+    fireLocalGameEvent({
+      type: event.type,
+      uid: event.uid,
+    })
+  })
 
-  const handleInput = (input: InputState) => {
-    setGameState(
-      produce(draft => {
-        const target = draft.pieces[input.targetID]
-        if (!target) return
-
-        if (input.timestamp > draft.updatedAt) {
-          draft.updatedAt = input.timestamp
-
-          if (input.type === 'L') {
-            sounds.dash.then(s => s.play())
-            target.i--
-            target.iTimestamp = Date.now()
-          }
-          if (input.type === 'R') {
-            sounds.dash.then(s => s.play())
-            target.i++
-            target.iTimestamp = Date.now()
-          }
-
-          for (const id in draft.pieces) {
-            const piece = draft.pieces[id]!
-            if (piece.id === target.id) continue
-            if (clampN(piece.i, tiles) !== clampN(target.i, tiles)) continue
-            // toast('💥')
-            // delete draft.pieces[id]
-          }
-        }
-      }),
-    )
-
-    setInputHistory(
-      produce(inputs => {
-        inputs[input.id] = input
-      }),
-    )
-  }
-
-  const onTouch = (type: InputState['type']) => async () => {
-    const timestamp = Date.now()
-    const id = `${myID}:${timestamp}`
-
-    handleInput({ id, targetID: myID, timestamp, type })
-
-    await dbSet(`inputs/${id}`, { id, targetID: myID, timestamp, type })
+  const onTouch = (dir: EventPlayerInput['dir']) => async () => {
+    fireGlobalGameEvent({ type: 'player_input', uid: myID, dir })
   }
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />

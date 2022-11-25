@@ -1,6 +1,6 @@
 import { getApp, initializeApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth'
-import { connectDatabaseEmulator, getDatabase, ref, set } from 'firebase/database'
+import { connectDatabaseEmulator, getDatabase, ref, set, push, onValue, onChildAdded } from 'firebase/database'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyC6RcwG8NYx-OMMNTYl4cuiNTzhYRx0w8o',
@@ -25,8 +25,17 @@ if (import.meta.env.DEV) {
   connectDatabaseEmulator(db, 'localhost', 9000)
 }
 
+const getCurrentUserID = () => auth.currentUser?.uid
+
 const dbRef = (path?: string | undefined) => ref(db, path)
-const dbSet = (path: string | undefined, value: unknown) => set(dbRef(path), value)
+const dbSet = <T = unknown>(path: string | undefined, value: T) => set(dbRef(path), value)
+const dbPush = <T = unknown>(path: string | undefined, value: T) => push(dbRef(path), value)
+
+const dbListen = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
+  onValue(dbRef(path), snapshot => callback(snapshot.val()))
+
+const dbAdded = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
+  onChildAdded(dbRef(path), data => callback(data.val()))
 
 export default app
-export { auth, signInAnonymously, db, dbRef, dbSet }
+export { auth, signInAnonymously, getCurrentUserID, db, dbRef, dbSet, dbPush, dbListen, dbAdded }
