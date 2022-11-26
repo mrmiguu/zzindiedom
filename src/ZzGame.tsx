@@ -3,7 +3,7 @@ import { Reducer, useCallback, useEffect, useMemo, useReducer, useState } from '
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
 
-import { dbPush } from './firebase'
+import { dbOnlineOnlyPush } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
 import { setUTCSong } from './utcMusic'
@@ -40,6 +40,13 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   const tiles = 64
 
   const windowSize = useWindowSize(innerWidth, innerHeight)
+  // const { newlyOnline } = useDBOnlineList()
+
+  // useEffect(() => {
+  //   for (const uid of newlyOnline) {
+  //     toast(`A new player approaches`)
+  //   }
+  // }, [newlyOnline])
 
   const cpuIDs = useMemo(
     () =>
@@ -191,7 +198,7 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
 
   const fireGlobalGameEvent = async (event: GameEvent) => {
     fireLocalGameEvent(event)
-    await dbPush(event.type, event)
+    dbOnlineOnlyPush(event.type, event)
   }
 
   const { pieces } = gameState
