@@ -1,56 +1,55 @@
-import { diff } from 'deep-object-diff'
-import { useEffect, useRef, useState } from 'react'
-import { dbListen, getCurrentUserID } from './firebase'
-import { keys } from './utils'
-import { GameEvent } from './ZzTypes'
+import { get, push, ref } from 'firebase/database'
+import { db, dbGet, dbListen, dbSet } from './firebase'
+import { DB_Map, DB_Player } from './ZzDBTypes'
 
-function useDBOnlineList() {
-  type DB_OnlineList = { [uid: string]: true }
+const db_getPlayer = (playerId: string) => dbGet<DB_Player>(`players/${playerId}`)
+const db_setPlayer = (playerId: string, player: DB_Player) => dbSet(`players/${playerId}`, player)
 
-  const uid = getCurrentUserID()
+const getOrCreateMap = async (mapId: string, defaultMap: DB_Map): Promise<[mapId: string, map: DB_Map]> => {
+  const mapRef = ref(db, `maps/${mapId}`)
+  const mapSnapshot = await get(mapRef)
 
-  const onlineListRef = useRef<DB_OnlineList>(uid ? { [uid]: true } : {})
-  const [newlyOnline, setNewlyOnline] = useState<string[]>([])
+  // let mapId = mapSnapshot.key
+  let map: DB_Map | null = mapSnapshot.val()
 
-  useEffect(() => {
-    dbListen<DB_OnlineList>('online', onlineList => {
-      setNewlyOnline(keys(diff(onlineListRef.current, onlineList)).filter(id => id !== uid))
-      onlineListRef.current = onlineList
-    })
-  }, [])
-
-  return {
-    newlyOnline,
-    onlineList: onlineListRef.current,
+  if (!map) {
+    const newMapRef = await push(mapRef, defaultMap)
+    newMapRef.key!
+    map = defaultMap
   }
+
+  return [mapId, map]
 }
 
-function useDBGameEvents<E extends GameEvent>(path: E['type'], onEvent: (event: E) => void) {
-  type DB_GameEvents = { [uuid: string]: E }
+const playerListener = (playerId: string, onPlayer: (player: DB_Player) => void) =>
+  dbListen(`players/${playerId}`, onPlayer)
 
-  const uid = getCurrentUserID()
+// function useDBGameEvents<E extends GameEvent>(path: E['type'], onEvent: (event: E) => void) {
+//   type DB_GameEvents = { [uuid: string]: E }
 
-  const gameEventsRef = useRef<DB_GameEvents>({})
-  const [addedGameEvents, setAddedGameEvents] = useState<DB_GameEvents>({})
+//   const uid = getCurrentUserID()
 
-  useEffect(() => {
-    return dbListen<DB_GameEvents>(path, gameEvents => {
-      setAddedGameEvents(diff(gameEventsRef.current, gameEvents) as DB_GameEvents)
-      gameEventsRef.current = gameEvents
-    })
-  }, [path])
+//   const gameEventsRef = useRef<DB_GameEvents>({})
+//   const [addedGameEvents, setAddedGameEvents] = useState<DB_GameEvents>({})
 
-  useEffect(() => {
-    for (const uuid in addedGameEvents) {
-      const addedGameEvent = addedGameEvents[uuid]!
-      if (addedGameEvent.uid !== uid) onEvent(addedGameEvent)
-    }
-  }, [uid, addedGameEvents])
+//   useEffect(() => {
+//     return dbListen<DB_GameEvents>(path, gameEvents => {
+//       setAddedGameEvents(diff(gameEventsRef.current, gameEvents) as DB_GameEvents)
+//       gameEventsRef.current = gameEvents
+//     })
+//   }, [path])
 
-  return {
-    addedGameEvents,
-    gameEvents: gameEventsRef.current,
-  }
-}
+//   useEffect(() => {
+//     for (const uuid in addedGameEvents) {
+//       const addedGameEvent = addedGameEvents[uuid]!
+//       if (addedGameEvent.uid !== uid) onEvent(addedGameEvent)
+//     }
+//   }, [uid, addedGameEvents])
 
-export { useDBGameEvents, useDBOnlineList }
+//   return {
+//     addedGameEvents,
+//     gameEvents: gameEventsRef.current,
+//   }
+// }
+
+export { db_getPlayer, db_setPlayer /* , useDBGameEvents */ }

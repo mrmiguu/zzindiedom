@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react'
+import { DB_Player } from './ZzDBTypes'
 
 type GameState = {
   pieces: { [id: string]: PieceState | EntityState | BeastState | PlayerState }
@@ -7,8 +8,8 @@ type GameState = {
 
 type PieceState = {
   id: string
-  i: number
-  iTimestamp?: number
+  x: number
+  xTimestamp?: number
   static?: 'foreground' | 'background' // TODO: background is broken
   important?: boolean
   className?: string
@@ -28,7 +29,7 @@ type PlayerState = BeastState & {
   name: string
 }
 
-type EventAddPlayer = { type: 'add_player'; uid: string; name: string; sprite: string; hueRotate: number }
+type EventAddPlayer = { type: 'add_player' } & DB_Player
 type EventRemovePlayer = { type: 'remove_player'; uid: string }
 type EventPlayerInput = { type: 'player_input'; uid: string; dir: 'L' | 'R' }
 type EventPlayerChat = {

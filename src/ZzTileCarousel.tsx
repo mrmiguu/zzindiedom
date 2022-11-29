@@ -85,7 +85,7 @@ function TileCarousel({ tiles, iCamera, cameraAngle, pieces, zIndexes }: TileCar
         className="absolute w-[1px] h-[1px] transition-transform duration-1000 ease-out-expo"
         style={{
           transformStyle: 'preserve-3d',
-          transform: `rotate(${(-piece.i * 360) / tiles}deg) translate(${0}px,${pxInradius}px)`,
+          transform: `rotate(${(-piece.x * 360) / tiles}deg) translate(${0}px,${pxInradius}px)`,
         }}
       >
         <div

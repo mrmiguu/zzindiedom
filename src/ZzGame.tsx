@@ -3,50 +3,29 @@ import { Reducer, useCallback, useEffect, useMemo, useReducer, useState } from '
 import { toast } from 'react-hot-toast'
 import useWindowSize from 'react-use/lib/useWindowSize'
 
-import { dbOnlineOnlyPush } from './firebase'
 import { clampN } from './math'
 import sounds from './sounds'
-import { setUTCSong } from './utcMusic'
+import { playUTCSong } from './utcMusic'
 import { max, min, pickRandom, random, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
-import { useDBGameEvents } from './ZzDB'
+import { DB_Player } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
 import PieceBadge from './ZzPieceBadge'
-import { cityScenerySprites, PlayerSprite, playerSprites } from './ZzSprites'
+import { cityScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel from './ZzTileCarousel'
-import {
-  EventAddPlayer,
-  EventPlayerChat,
-  EventPlayerInput,
-  EventRemovePlayer,
-  GameEvent,
-  GameState,
-  PieceState,
-} from './ZzTypes'
+import { EventPlayerInput, GameEvent, GameState, PieceState } from './ZzTypes'
 
 enablePatches()
 
-type GameProps = {
-  myID: string
-  myName: string
-  mySprite: PlayerSprite
-  mySpriteHueShiftDeg: number
-}
+type GameProps = { myPlayer: DB_Player }
 
-function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
-  const mapID = 'carousel001'
+function Game({ myPlayer }: GameProps) {
+  const mapId = myPlayer.map_id
   const perspective = 1024
   const cameraAngle = 75
   const tiles = 64
 
   const windowSize = useWindowSize(innerWidth, innerHeight)
-  // const { newlyOnline } = useDBOnlineList()
-
-  // useEffect(() => {
-  //   for (const uid of newlyOnline) {
-  //     toast(`A new player approaches`)
-  //   }
-  // }, [newlyOnline])
 
   const cpuIDs = useMemo(
     () =>
@@ -62,7 +41,7 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   )
 
   const cpuPieces = useMemo(() => {
-    const seed = `${mapID}:cpuPieces`
+    const seed = `${mapId}:cpuPieces`
 
     return cpuIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({
@@ -71,16 +50,16 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
           id,
           sprite: pickRandom(playerSprites, { seed }),
           spriteHueShiftDeg: 360 * random({ seed }),
-          i: ~~(tiles * random({ seed })),
-          iTimestamp: 0,
+          x: ~~(tiles * random({ seed })),
+          xTimestamp: 0,
         },
       }),
       {},
     )
-  }, [cpuIDs, tiles, mapID])
+  }, [cpuIDs, tiles, mapId])
 
   const sceneryPieces = useMemo(() => {
-    const seed = `${mapID}:sceneryPieces`
+    const seed = `${mapId}:sceneryPieces`
 
     return sceneryIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({
@@ -89,19 +68,19 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
           id,
           sprite: pickRandom(cityScenerySprites, { seed }),
           spriteHueShiftDeg: 0,
-          i: 1 + ~~((tiles - 1) * random({ seed })),
+          x: 1 + ~~((tiles - 1) * random({ seed })),
           static: random({ seed }) < 0.5 ? 'background' : 'foreground',
         },
       }),
       {},
     )
-  }, [sceneryIDs, tiles, mapID])
+  }, [sceneryIDs, tiles, mapId])
 
   const sendChat = (uid: string, sprite: string, spriteHueShiftDeg: number, name: string, msg: string) => {
     const wordsPerSec = 2
     const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
 
-    const myMsg = uid === myID
+    const myMsg = uid === myPlayer.id
 
     const width = 222
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
@@ -123,14 +102,14 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
       switch (event.type) {
         case 'add_player':
           return produce(state, state => {
-            state.pieces[event.uid] = {
-              id: event.uid,
+            state.pieces[event.id] = {
+              id: event.id,
               name: event.name,
-              level: 1,
-              sprite: event.sprite,
-              spriteHueShiftDeg: event.hueRotate,
-              i: 0,
-              iTimestamp: 0,
+              level: event.exp,
+              sprite: event.sprite_emoji,
+              spriteHueShiftDeg: event.sprite_hue_rotate,
+              x: 0,
+              xTimestamp: 0,
             }
           })
 
@@ -147,20 +126,20 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
             if (event.type === 'player_input') {
               if (event.dir === 'L') {
                 sounds.dash.then(s => s.play())
-                target.i--
-                target.iTimestamp = Date.now()
+                target.x--
+                target.xTimestamp = Date.now()
               }
               if (event.dir === 'R') {
                 sounds.dash.then(s => s.play())
-                target.i++
-                target.iTimestamp = Date.now()
+                target.x++
+                target.xTimestamp = Date.now()
               }
             }
 
             for (const id in state.pieces) {
               const piece = state.pieces[id]!
               if (piece.id === target.id) continue
-              if (clampN(piece.i, tiles) !== clampN(target.i, tiles)) continue
+              if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
               // toast('💥')
               // delete state.pieces[id]
             }
@@ -182,7 +161,7 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
         ...sceneryPieces,
         warp001: {
           id: 'warp001',
-          i: 2,
+          x: 2,
           static: 'foreground',
           className: 'w-16 h-20 rounded-full border border-yellow-500 bg-blue-500/50 animate-pulse',
         },
@@ -191,32 +170,25 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
     },
   )
 
-  useDBGameEvents<EventAddPlayer>('add_player', fireLocalGameEvent)
-  useDBGameEvents<EventRemovePlayer>('remove_player', fireLocalGameEvent)
-  useDBGameEvents<EventPlayerInput>('player_input', fireLocalGameEvent)
-  useDBGameEvents<EventPlayerChat>('player_chat', fireLocalGameEvent)
+  useEffect(() => {
+    fireLocalGameEvent({ type: 'add_player', ...myPlayer })
+  }, [])
+
+  // useDBGameEvents<EventAddPlayer>('add_player', fireLocalGameEvent)
+  // useDBGameEvents<EventRemovePlayer>('remove_player', fireLocalGameEvent)
+  // useDBGameEvents<EventPlayerInput>('player_input', fireLocalGameEvent)
+  // useDBGameEvents<EventPlayerChat>('player_chat', fireLocalGameEvent)
 
   const fireGlobalGameEvent = async (event: GameEvent) => {
     fireLocalGameEvent(event)
-    dbOnlineOnlyPush(event.type, event)
+    // dbOnlineOnlyPush(event.type, event)
   }
 
   const { pieces } = gameState
 
   useEffect(() => {
-    fireGlobalGameEvent({
-      type: 'add_player',
-      uid: myID,
-      name: myName,
-      sprite: mySprite,
-      hueRotate: mySpriteHueShiftDeg,
-    })
-    return () => {
-      fireGlobalGameEvent({ type: 'remove_player', uid: myID })
-    }
-  }, [myID, myName, mySprite, mySpriteHueShiftDeg])
-
-  setUTCSong('LEMON_CAKE')
+    playUTCSong('LEMON_CAKE')
+  }, [])
 
   const bgLayer = (
     <div className="absolute w-full h-full bg-gradient-to-b from-[#36D6ED] to-[#C8F6FF] pointer-events-none" />
@@ -224,7 +196,7 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
 
   const startAI = useCallback(
     (aiID: string) => {
-      const seed = `${mapID}:startAI`
+      const seed = `${mapId}:startAI`
 
       const msRandom = () => 1000 * (2 + (5 - 2) * random({ seed }))
 
@@ -237,27 +209,27 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
 
       return () => clearTimeout(timeoutID)
     },
-    [mapID],
+    [mapId],
   )
 
   useEffect(() => {
     cpuIDs.forEach(startAI)
   }, [cpuIDs, startAI])
 
-  const myPiece = pieces[myID]
+  const myPiece = pieces[myPlayer.id]
 
   const zIndexes = useMemo(
     () =>
       values(pieces)
         .filter(p => !p.static)
         .sort((a, b) => {
-          const di = clampN(a.i, tiles) - clampN(b.i, tiles)
-          return di === 0 ? (a.iTimestamp ?? 0) - (b.iTimestamp ?? 0) : di
+          const di = clampN(a.x, tiles) - clampN(b.x, tiles)
+          return di === 0 ? (a.xTimestamp ?? 0) - (b.xTimestamp ?? 0) : di
         }),
     [pieces],
   )
 
-  const myZIndex = zIndexes.findIndex(p => p.id === myID)
+  const myZIndex = zIndexes.findIndex(p => p.id === myPlayer.id)
   const neighborRadius = 2
   const entityNeighbors = myPiece
     ? zIndexes
@@ -267,8 +239,8 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
         )
         .filter(
           p =>
-            clampN(p.i, tiles) >= clampN(myPiece.i, tiles) - neighborRadius &&
-            clampN(p.i, tiles) <= clampN(myPiece.i, tiles) + neighborRadius,
+            clampN(p.x, tiles) >= clampN(myPiece.x, tiles) - neighborRadius &&
+            clampN(p.x, tiles) <= clampN(myPiece.x, tiles) + neighborRadius,
         )
     : []
 
@@ -319,10 +291,10 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
             onSubmit={({ msg }) => {
               fireGlobalGameEvent({
                 type: 'player_chat',
-                uid: myID,
-                sprite: mySprite,
-                hueRotate: mySpriteHueShiftDeg,
-                name: myName,
+                uid: myPlayer.id,
+                sprite: myPlayer.sprite_emoji,
+                hueRotate: myPlayer.sprite_hue_rotate,
+                name: myPlayer.name,
                 msg,
               })
             }}
@@ -344,21 +316,25 @@ function Game({ myID, myName, mySprite, mySpriteHueShiftDeg }: GameProps) {
   )
 
   const onTouch = (dir: EventPlayerInput['dir']) => async () => {
-    fireGlobalGameEvent({ type: 'player_input', uid: myID, dir })
+    fireGlobalGameEvent({ type: 'player_input', uid: myPlayer.id, dir })
   }
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />
 
+  const tileCarousel = (
+    <TileCarousel
+      iCamera={myPiece?.x ?? 0}
+      cameraAngle={cameraAngle}
+      tiles={tiles}
+      pieces={pieces}
+      zIndexes={zIndexes}
+    />
+  )
+
   return (
     <div className="absolute w-full h-full overflow-hidden" style={{ perspective: `${perspective}px` }}>
       {bgLayer}
-      <TileCarousel
-        iCamera={myPiece?.i ?? 0}
-        cameraAngle={cameraAngle}
-        tiles={tiles}
-        pieces={pieces}
-        zIndexes={zIndexes}
-      />
+      {tileCarousel}
       {LRtouchLayer}
       {badgesLayer}
       {sideButtonsLayer}

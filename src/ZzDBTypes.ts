@@ -1,6 +1,8 @@
 type DB_Player = {
+  id: string
   name: string
   sprite_emoji: string
+  sprite_hue_rotate: number
   exp: number
   map_id: string
   party_id: string | null
@@ -15,22 +17,26 @@ type DB_PlayerFriends = {
 type DB_MapPlayer = {
   x: number
 }
-type DB_MapChatMessage = {
+type DB_Map = {
+  id: string
+  players: { [player_id: string]: true }
+  chat_messages: { [message_id: string]: true }
+}
+
+type DB_ChatMessage = {
+  id: string
   player_id: string
   msg: string
   timestamp: string
 }
-type DB_Map = {
-  name: string
-  players: { [player_id: string]: DB_MapPlayer }
-  chat_messages: { [message_id: string]: DB_MapChatMessage }
-}
 
 type DB_Party = {
+  id: string
   players: { [player_id: string]: true }
 }
 
 type DB_Quest = {
+  id: string
   players_stage: { [player_id: string]: number }
 }
 
@@ -40,6 +46,9 @@ type DB = {
   player_friends: { [player_id: string]: DB_PlayerFriends }
 
   maps: { [map_id: string]: DB_Map }
+  map_players: { [player_id: string]: DB_MapPlayer }
+
+  chat_messages: { [message_id: string]: DB_ChatMessage }
 
   quests: { [quest_id: string]: DB_Quest }
 
@@ -51,7 +60,7 @@ export type {
   DB_PlayerItems,
   DB_PlayerFriends,
   DB_MapPlayer,
-  DB_MapChatMessage,
+  DB_ChatMessage,
   DB_Map,
   DB_Party,
   DB_Quest,

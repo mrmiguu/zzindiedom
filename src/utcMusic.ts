@@ -43,23 +43,30 @@ const music = {
   ),
 } as const
 
+const volumes: { -readonly [song in keyof typeof music]?: number } = {}
+
 type SongName = keyof typeof music
 
 let currentUTCSong: SongName | undefined
-let setUTCSong: (track: SongName) => void
+let playUTCSong: (track: SongName) => void
 
 function useUTCMusic() {
-  const [_currentUTCSong, _setUTCSong] = useState<SongName>()
-  currentUTCSong = _currentUTCSong
-  setUTCSong = _setUTCSong
+  const fadeDuration = 1000
 
-  const { value: howlCurrentTrack } = useAsync(
-    async () => (_currentUTCSong ? music[_currentUTCSong] : undefined),
-    [_currentUTCSong],
-  )
+  const [_currentUTCSong, _playUTCSong] = useState<SongName>()
+  currentUTCSong = _currentUTCSong
+  playUTCSong = _playUTCSong
+
+  const { value: howlCurrentTrack } = useAsync(async () => {
+    if (!_currentUTCSong) return
+
+    const howl = await music[_currentUTCSong]
+    volumes[_currentUTCSong] = volumes[_currentUTCSong] ?? howl.volume()
+
+    return howl
+  }, [_currentUTCSong])
 
   const [musicUnlocked, setMusicUnlocked] = useState(false)
-  const [musicLoaded, setMusicLoaded] = useState(false)
   const [restartMusic, setRestartMusic] = useState(0)
   const [musicDuration, setMusicDuration] = useState(0)
   const [musicSyncTimeData, setMusicSyncTimeData] = useState(0)
@@ -71,13 +78,20 @@ function useUTCMusic() {
   const [musicStop, setMusicStop] = useState(false)
   const [musicMute, setMusicMute] = useState(false)
   const [musicVolume, setMusicVolume] = useState(false)
+  const originalVolume = (_currentUTCSong && volumes[_currentUTCSong]) || 0
 
   const visibility = useVisibilityChange()
 
+  const onLoad = () => {
+    const duration = ~~((howlCurrentTrack?.duration() ?? 0) * 1000) / 1000 // keep accuracy only up to ms
+    setMusicDuration(duration)
+  }
+
   useEffect(() => {
     if (!howlCurrentTrack) return
+
     howlCurrentTrack.on('unlock', () => setMusicUnlocked(true))
-    howlCurrentTrack.on('load', () => setMusicLoaded(true))
+    howlCurrentTrack.on('load', () => onLoad())
     howlCurrentTrack.on('pause', () => setMusicPaused(true))
     howlCurrentTrack.on('playerror', () => setMusicError(true))
     howlCurrentTrack.on('end', () => setMusicEnd(true))
@@ -87,43 +101,49 @@ function useUTCMusic() {
     howlCurrentTrack.on('volume', () => setMusicVolume(true))
   }, [howlCurrentTrack])
 
+  const fade = (track: Howl, volume: number, dir: 'in' | 'out') => {
+    if (dir === 'in') {
+      track.fade(0, volume, fadeDuration)
+      track.play()
+    } else if (dir === 'out') {
+      track.fade(volume, 0, fadeDuration / 100)
+      track.stop()
+      // setTimeout(() => track.stop(), fadeDuration)
+    }
+  }
+
   useEffect(() => {
     if (!howlCurrentTrack) return
     if (!musicUnlocked) return
-    if (!musicLoaded) return
-
-    const duration = ~~(howlCurrentTrack.duration() * 1000) / 1000 // keep accuracy only up to ms
-    if (!duration) return
-    setMusicDuration(duration)
+    if (!musicDuration) return
 
     const currentSeconds = coordinatedUniversalMilliseconds() / 1000
     setMusicSyncTimeData(currentSeconds)
 
-    const startTime = currentSeconds % duration
+    const startTime = currentSeconds % musicDuration
     setMusicStartTime(startTime)
 
     howlCurrentTrack.seek(startTime)
-    howlCurrentTrack.play()
+    fade(howlCurrentTrack, originalVolume, 'in')
 
     return () => {
-      howlCurrentTrack?.stop()
+      fade(howlCurrentTrack, originalVolume, 'out')
     }
-  }, [howlCurrentTrack, musicUnlocked, musicLoaded, restartMusic])
+  }, [howlCurrentTrack, musicUnlocked, musicDuration, restartMusic])
 
   // for when the phone screen turns off and the user turns it back on, opening the browser to restart the music
   useEffect(() => {
     if (!howlCurrentTrack) return
     if (!musicUnlocked) return
-    if (!musicLoaded) return
+    if (!musicDuration) return
     if (visibility) setRestartMusic(coordinatedUniversalMilliseconds())
-    else howlCurrentTrack.stop()
-  }, [howlCurrentTrack, musicUnlocked, musicLoaded, visibility])
+    else fade(howlCurrentTrack, originalVolume, 'out')
+  }, [howlCurrentTrack, musicUnlocked, musicDuration, visibility])
 
   // log(
   //   stringify(
   //     {
   //       musicUnlocked,
-  //       musicLoaded,
   //       restartMusic,
   //       musicDuration,
   //       musicSyncTimeData,
@@ -142,4 +162,4 @@ function useUTCMusic() {
   // )
 }
 
-export { useUTCMusic, setUTCSong, currentUTCSong }
+export { useUTCMusic, playUTCSong, currentUTCSong }

@@ -2,6 +2,7 @@ import { getApp, initializeApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth'
 import {
   connectDatabaseEmulator,
+  get,
   getDatabase,
   onChildAdded,
   onDisconnect,
@@ -51,6 +52,7 @@ const dbOnlineOnlyPush = <T = unknown>(path: string | undefined, value: T) => {
   onDisconnect(dbPush(path, value)).remove()
 }
 
+const dbGet = async <T = unknown>(path: string | undefined): Promise<T | null> => (await get(dbRef(path))).val()
 const dbListen = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
   onValue(dbRef(path), snapshot => callback(snapshot.val()))
 
@@ -82,9 +84,11 @@ export {
   getCurrentUserID,
   db,
   dbRef,
+  dbGet,
+  dbSet,
   dbOnlineOnlySet,
-  dbOnlineOnlyPush,
   dbPush,
+  dbOnlineOnlyPush,
   dbListen,
   dbAdded,
   onDisconnect,

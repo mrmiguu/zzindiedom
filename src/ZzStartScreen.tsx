@@ -1,12 +1,10 @@
 import produce from 'immer'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import useAsync from 'react-use/lib/useAsync'
-import { auth, signInAnonymously } from './firebase'
 import sounds from './sounds'
-import { setUTCSong } from './utcMusic'
 import { error, log, random, stringify } from './utils'
+import { DB_Player } from './ZzDBTypes'
 import PieceBadge from './ZzPieceBadge'
 import { PlayerSprite, playerSprites } from './ZzSprites'
 import zzz_svg from './zzz.svg'
@@ -15,33 +13,18 @@ const shuffledPlayerSprites = produce<readonly PlayerSprite[]>(playerSprites, pl
   playerSpritesDraft.sort(() => random() - 0.5)
 })
 
-type FormData = {
-  userID: string
-  playerName: string
-  sprite: PlayerSprite
-  hueShiftDeg: number
-}
+type CustomizablePlayer = Pick<DB_Player, 'name' | 'sprite_emoji' | 'sprite_hue_rotate'>
 
 type StartScreenProps = {
-  onSubmit: (data: FormData) => void
+  onSubmit: (custom: CustomizablePlayer) => void
+  submitDisabled?: boolean
 }
 
-function StartScreen({ onSubmit }: StartScreenProps) {
-  const [userID, setUserID] = useState<string | null>(null)
-  const { register, handleSubmit, control } = useForm<FormData>()
+function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
+  const { register, handleSubmit, control } = useForm<CustomizablePlayer>()
 
-  useAsync(async () => {
-    const { user } = await signInAnonymously(auth)
-    log(`You signed in (${user.uid})`)
-    setUserID(user.uid)
-  }, [])
-
-  const generateRandomHueShiftDeg = () => 360 * random()
-  const [hueShiftDeg, setHueShiftDeg] = useState(generateRandomHueShiftDeg())
-
-  useEffect(() => {
-    setUTCSong('STRAWBERRY_FLAVOR_LOVE')
-  }, [])
+  const generateRandomHueRotate = () => 360 * random()
+  const [hueRotate, setHueRotate] = useState(generateRandomHueRotate())
 
   const gameLogo = (
     <div className="flex flex-col items-center text-black">
@@ -55,23 +38,23 @@ function StartScreen({ onSubmit }: StartScreenProps) {
   const characterChoice = (
     <Controller
       control={control}
-      name="sprite"
+      name="sprite_emoji"
       defaultValue={shuffledPlayerSprites[0]!}
       rules={{ required: true }}
       render={({ field: { onChange, value: sprite } }) => (
-        <PieceBadge sprite={sprite} spriteHueShiftDeg={hueShiftDeg}>
+        <PieceBadge sprite={sprite} spriteHueShiftDeg={hueRotate}>
           <div className="absolute flex items-end justify-end w-full h-full translate-x-3">
             <button
               className={`w-10 h-10 text-4xl rounded-full ${animateDice && 'animate-dice-bounce'}`}
               type="button"
-              onMouseDown={() => setAnimateDice(true)}
+              onClick={() => setAnimateDice(true)}
               onAnimationStart={() => sounds.button.then(s => s.play())}
               onAnimationIteration={() => {
                 setAnimateDice(false)
 
-                setHueShiftDeg(generateRandomHueShiftDeg())
+                setHueRotate(generateRandomHueRotate())
 
-                const index = shuffledPlayerSprites.indexOf(sprite)
+                const index = shuffledPlayerSprites.indexOf(sprite as PlayerSprite)
                 onChange(shuffledPlayerSprites[(index + 1) % shuffledPlayerSprites.length]!)
               }}
             >
@@ -89,7 +72,7 @@ function StartScreen({ onSubmit }: StartScreenProps) {
       autoFocus
       autoComplete="off"
       placeholder="Player name here"
-      {...register('playerName', { required: true })}
+      {...register('name', { required: true })}
     />
   )
 
@@ -132,13 +115,7 @@ function StartScreen({ onSubmit }: StartScreenProps) {
       className="px-4 py-2 text-black border-2 border-white rounded hover:opacity-90 active:animate-ping"
       onMouseDown={e => sounds.button.then(s => s.play())}
       onClick={async () => {
-        // const myNetworkID = getMyNetworkID()
-        // const networkIDFromURL = urlSearchParams()['network']
-
-        // const networkID = networkIDFromURL ?? myNetworkID
         const url = new URL(`${location}`).toString()
-        // url.searchParams.set('network', networkID)
-
         const shareData = { title: 'Zz Indie', text: `Play Zz Indie with me! ${url}` }
 
         try {
@@ -171,11 +148,11 @@ function StartScreen({ onSubmit }: StartScreenProps) {
   const startButton = (
     <button
       className={`px-4 py-2 bg-white rounded active:animate-ping ${
-        userID ? 'animate-breathe hover:opacity-90' : 'contrast-50'
+        submitDisabled ? 'contrast-50' : 'animate-breathe hover:opacity-90'
       }`}
       onMouseDown={e => sounds.button.then(s => s.play())}
       type="submit"
-      disabled={!userID}
+      disabled={submitDisabled}
     >
       ▷ Start
     </button>
@@ -211,7 +188,7 @@ function StartScreen({ onSubmit }: StartScreenProps) {
   )
 
   return (
-    <form className="font-mono" onSubmit={handleSubmit(props => onSubmit({ ...props, hueShiftDeg, userID: userID! }))}>
+    <form className="font-mono" onSubmit={handleSubmit(props => onSubmit({ ...props, sprite_hue_rotate: hueRotate }))}>
       {bgColor}
       {bgTexture}
       {ui}
@@ -220,3 +197,4 @@ function StartScreen({ onSubmit }: StartScreenProps) {
 }
 
 export default StartScreen
+export type { CustomizablePlayer }

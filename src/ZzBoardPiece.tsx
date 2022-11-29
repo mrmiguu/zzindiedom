@@ -7,7 +7,7 @@ type BoardPieceProps = (PieceState | EntityState | BeastState | PlayerState) & {
 }
 
 function BoardPiece(props: BoardPieceProps) {
-  const { id, z } = props
+  const { z } = props
 
   const zDepth = props.static === 'background' ? -1 : props.static === 'foreground' ? 0 : -0.5 + z
 
