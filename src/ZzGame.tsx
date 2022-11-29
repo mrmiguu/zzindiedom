@@ -308,7 +308,11 @@ function Game({ myPlayer }: GameProps) {
   const sideButtonsLayer = (
     <div className="absolute flex items-end justify-end w-full h-full pointer-events-none">
       <div className="flex flex-col gap-3 px-4 py-20 text-4xl">
-        <button className="pointer-events-auto" onClick={() => setShowChatDrawer(true)}>
+        <button
+          className="pointer-events-auto hover:opacity-90 active:animate-ping"
+          onMouseDown={e => sounds.button.then(s => s.play())}
+          onClick={() => setShowChatDrawer(true)}
+        >
           💬
         </button>
       </div>

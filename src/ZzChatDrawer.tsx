@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import sounds from './sounds'
 
 type FormData = {
   msg: string
@@ -32,13 +33,17 @@ function ChatDrawer({ onSubmit, onEsc }: ChatDrawerProps) {
       >
         <input
           {...register('msg', { required: true })}
-          className="w-full px-2 py-1 bg-transparent rounded-full grow"
+          className="w-full px-2 py-1 bg-transparent rounded-full grow focus:outline-none focus:ring-0"
           placeholder="Send message..."
           autoComplete="off"
           autoFocus
         />
 
-        <button className="p-2 grayscale brightness-[99] leading-none rounded-full border-2 border-white" type="submit">
+        <button
+          className="p-2 grayscale brightness-[99] leading-none rounded-full border-2 border-white hover:opacity-90 active:animate-ping"
+          type="submit"
+          onMouseDown={e => sounds.button.then(s => s.play())}
+        >
           Send
         </button>
       </form>

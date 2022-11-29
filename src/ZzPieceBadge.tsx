@@ -1,4 +1,5 @@
 import { PropsWithChildren } from 'react'
+import sounds from './sounds'
 import { BeastState, EntityState, PlayerState } from './ZzTypes'
 
 type OnlySprite = Pick<EntityState, 'sprite' | 'spriteHueShiftDeg'>
@@ -14,7 +15,13 @@ function PieceBadge({ sprite, spriteHueShiftDeg, size, onClick, children }: Piec
   const sizeCls = size === 12 ? 'w-12 h-12' : size === 16 ? 'w-16 h-16' : size === 20 ? 'w-20 h-20' : 'w-24 h-24'
 
   return (
-    <div className={`relative ${sizeCls} ${onClick && 'pointer-events-auto cursor-pointer'}`} onClick={onClick}>
+    <div
+      className={`relative ${sizeCls} ${
+        onClick && 'pointer-events-auto cursor-pointer hover:opacity-90 active:animate-ping'
+      }`}
+      onMouseDown={e => onClick && sounds.button.then(s => s.play())}
+      onClick={onClick}
+    >
       <div className="absolute bottom-0 w-full h-full overflow-hidden border border-white rounded-full w- bg-black/30" />
 
       <div className="absolute flex items-end justify-center w-full h-[999%] bottom-0 overflow-hidden border-b-2 border-white rounded-full pointer-events-none">
