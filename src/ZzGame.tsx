@@ -1,25 +1,39 @@
 import produce, { enablePatches } from 'immer'
-import { Reducer, useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import diff from 'microdiff'
+import { Reducer, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { useAsync } from 'react-use'
 import useWindowSize from 'react-use/lib/useWindowSize'
 
 import { clampN } from './math'
 import sounds from './sounds'
 import { playUTCSong } from './utcMusic'
-import { max, min, pickRandom, random, values } from './utils'
+import { keys, log, max, min, pickRandom, random, stringify, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
-import { DB_Player } from './ZzDBTypes'
+import {
+  db_getChatMessage,
+  db_getOrSetPlayerPosition,
+  db_mapChatMessagesListener,
+  db_mapPlayersListener,
+  db_playerListener,
+  db_playerPositionListener,
+  db_pushMapChatMessageWhileOnline,
+  db_setMapPlayerWhileOnline,
+  db_setPlayerPosition,
+} from './ZzDB'
+import { DB, DB_Map, DB_Player } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel from './ZzTileCarousel'
-import { EventPlayerInput, GameEvent, GameState, PieceState } from './ZzTypes'
+import { GameEvent, GameState, PieceState } from './ZzTypes'
 
 enablePatches()
 
 type GameProps = { myPlayer: DB_Player }
 
 function Game({ myPlayer }: GameProps) {
+  const myId = myPlayer.id
   const mapId = myPlayer.map_id
   const perspective = 1024
   const cameraAngle = 75
@@ -80,7 +94,7 @@ function Game({ myPlayer }: GameProps) {
     const wordsPerSec = 2
     const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
 
-    const myMsg = uid === myPlayer.id
+    const myMsg = uid === myId
 
     const width = 222
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
@@ -100,7 +114,7 @@ function Game({ myPlayer }: GameProps) {
   const [gameState, fireLocalGameEvent] = useReducer<Reducer<GameState, GameEvent>>(
     (state, event) => {
       switch (event.type) {
-        case 'add_player':
+        case 'set_player':
           return produce(state, state => {
             state.pieces[event.id] = {
               id: event.id,
@@ -115,38 +129,32 @@ function Game({ myPlayer }: GameProps) {
 
         case 'remove_player':
           return produce(state, state => {
-            delete state.pieces[event.uid]
+            delete state.pieces[event.id]
           })
 
-        case 'player_input':
+        case 'set_player_position':
           return produce(state, state => {
-            const target = state.pieces[event.uid]
+            const target = state.pieces[event.id]
             if (!target) return
 
-            if (event.type === 'player_input') {
-              if (event.dir === 'L') {
-                sounds.dash.then(s => s.play())
-                target.x--
-                target.xTimestamp = Date.now()
-              }
-              if (event.dir === 'R') {
-                sounds.dash.then(s => s.play())
-                target.x++
-                target.xTimestamp = Date.now()
-              }
-            }
+            sounds.dash.then(s => s.play())
+            target.x = event.x
+            target.xTimestamp = Date.now()
 
-            for (const id in state.pieces) {
-              const piece = state.pieces[id]!
-              if (piece.id === target.id) continue
-              if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
-              // toast('💥')
-              // delete state.pieces[id]
-            }
+            // for (const id in state.pieces) {
+            //   const piece = state.pieces[id]!
+            //   if (piece.id === target.id) continue
+            //   if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
+            //   // toast('💥')
+            //   // delete state.pieces[id]
+            // }
           })
 
-        case 'player_chat':
-          sendChat(event.uid, event.sprite, event.hueRotate, event.name, event.msg)
+        case 'chat_message':
+          const piece = state.pieces[event.player_id]
+          if (piece && 'sprite' in piece && 'spriteHueShiftDeg' in piece && 'name' in piece) {
+            sendChat(event.player_id, piece.sprite, piece.spriteHueShiftDeg, piece.name, event.msg)
+          }
           break
 
         default:
@@ -170,18 +178,132 @@ function Game({ myPlayer }: GameProps) {
     },
   )
 
-  useEffect(() => {
-    fireLocalGameEvent({ type: 'add_player', ...myPlayer })
-  }, [])
+  const [mapPlayerIds, setMapPlayerIds] = useState<DB_Map['players']>({})
 
-  // useDBGameEvents<EventAddPlayer>('add_player', fireLocalGameEvent)
-  // useDBGameEvents<EventRemovePlayer>('remove_player', fireLocalGameEvent)
-  // useDBGameEvents<EventPlayerInput>('player_input', fireLocalGameEvent)
-  // useDBGameEvents<EventPlayerChat>('player_chat', fireLocalGameEvent)
+  useAsync(async () => {
+    db_setMapPlayerWhileOnline(mapId, myId)
+
+    const unsub_mapPlayersListener = db_mapPlayersListener(mapId, newIds => {
+      setMapPlayerIds(oldIds => {
+        const ops = diff(oldIds, newIds ?? {})
+
+        const deleteOps = ops.filter(op => op.type === 'REMOVE')
+        for (const op of deleteOps) {
+          const id = op.path[0]! as string
+          fireLocalGameEvent({ type: 'remove_player', id })
+        }
+
+        return newIds ?? {}
+      })
+    })
+
+    fireLocalGameEvent({ type: 'set_player', ...myPlayer })
+
+    const position = await db_getOrSetPlayerPosition(myId, { x: 0 })
+    fireLocalGameEvent({ type: 'set_player_position', id: myId, ...position })
+
+    return () => {
+      unsub_mapPlayersListener()
+    }
+  }, [myId, mapId])
+
+  const chatMessagesRef = useRef<DB_Map['chat_messages']>({})
+  useAsync(async () => {
+    const unsub_mapChatMessagesListener = db_mapChatMessagesListener(mapId, async messageIds => {
+      const ops = diff(chatMessagesRef.current, messageIds ?? {})
+      chatMessagesRef.current = messageIds ?? {}
+
+      const addedOps = ops.filter(op => op.type === 'CREATE')
+      const newMessageIds = addedOps.map(({ path }) => path[0] as string)
+      const messages = await Promise.all(newMessageIds.map(db_getChatMessage))
+
+      for (const msg of messages) {
+        if (!msg || msg.player_id === myId) continue
+        fireLocalGameEvent({ type: 'chat_message', map_id: mapId, ...msg })
+      }
+    })
+
+    return () => {
+      unsub_mapChatMessagesListener()
+    }
+  }, [mapId])
+
+  const [players, setPlayers] = useState<DB['players']>({})
+  const [playerPositions, setPlayerPositions] = useState<DB['player_positions']>({})
+
+  useEffect(() => {
+    log(stringify({ mapPlayerIds }))
+
+    const unsub_playerListeners = keys(mapPlayerIds)
+      .filter(id => id !== myId)
+      .map(id =>
+        db_playerListener(id, player =>
+          setPlayers(
+            produce(players => {
+              if (player) players[id] = player
+              else delete players[id]
+            }),
+          ),
+        ),
+      )
+
+    const unsub_playerPositionListeners = keys(mapPlayerIds)
+      .filter(id => id !== myId)
+      .map(id =>
+        db_playerPositionListener(id, position =>
+          setPlayerPositions(
+            produce(positions => {
+              if (position) positions[id] = position
+              else delete positions[id]
+            }),
+          ),
+        ),
+      )
+
+    return () => {
+      for (const unsub_playerListener of unsub_playerListeners) {
+        unsub_playerListener()
+      }
+      for (const unsub_playerPositionListener of unsub_playerPositionListeners) {
+        unsub_playerPositionListener()
+      }
+    }
+  }, [mapPlayerIds])
+
+  useEffect(() => {
+    log(stringify({ players }))
+
+    for (const id in players) {
+      const player = players[id]!
+      fireLocalGameEvent({ type: 'set_player', ...player })
+    }
+  }, [players])
+
+  useEffect(() => {
+    log(stringify({ playerPositions }))
+
+    for (const id in playerPositions) {
+      const position = playerPositions[id]!
+      fireLocalGameEvent({ type: 'set_player_position', id, ...position })
+    }
+  }, [playerPositions])
 
   const fireGlobalGameEvent = async (event: GameEvent) => {
     fireLocalGameEvent(event)
-    // dbOnlineOnlyPush(event.type, event)
+
+    switch (event.type) {
+      case 'set_player_position':
+        db_setPlayerPosition(event.id, { x: event.x })
+        break
+
+      case 'chat_message':
+        db_pushMapChatMessageWhileOnline(event.map_id, {
+          msg: event.msg,
+          player_id: event.player_id,
+          timestamp: event.timestamp,
+        })
+        break
+    }
   }
 
   const { pieces } = gameState
@@ -203,7 +325,7 @@ function Game({ myPlayer }: GameProps) {
       let timeoutID: NodeJS.Timeout
       const ai = () => {
         timeoutID = setTimeout(ai, msRandom())
-        fireLocalGameEvent({ type: 'player_input', uid: aiID, dir: random({ seed }) < 0.5 ? 'L' : 'R' })
+        // fireLocalGameEvent({ type: 'player_input', uid: aiID, dir: random({ seed }) < 0.5 ? 'L' : 'R' })
       }
       timeoutID = setTimeout(ai, msRandom())
 
@@ -216,7 +338,7 @@ function Game({ myPlayer }: GameProps) {
     cpuIDs.forEach(startAI)
   }, [cpuIDs, startAI])
 
-  const myPiece = pieces[myPlayer.id]
+  const myPiece = pieces[myId]
 
   const zIndexes = useMemo(
     () =>
@@ -229,7 +351,7 @@ function Game({ myPlayer }: GameProps) {
     [pieces],
   )
 
-  const myZIndex = zIndexes.findIndex(p => p.id === myPlayer.id)
+  const myZIndex = zIndexes.findIndex(p => p.id === myId)
   const neighborRadius = 2
   const entityNeighbors = myPiece
     ? zIndexes
@@ -290,13 +412,20 @@ function Game({ myPlayer }: GameProps) {
           <ChatDrawer
             onSubmit={({ msg }) => {
               fireGlobalGameEvent({
-                type: 'player_chat',
-                uid: myPlayer.id,
-                sprite: myPlayer.sprite_emoji,
-                hueRotate: myPlayer.sprite_hue_rotate,
-                name: myPlayer.name,
+                type: 'chat_message',
+                map_id: mapId,
+                player_id: myId,
                 msg,
+                timestamp: `${Date.now()}`,
               })
+              // fireGlobalGameEvent({
+              //   type: 'player_chat',
+              //   uid: myId,
+              //   sprite: myPlayer.sprite_emoji,
+              //   hueRotate: myPlayer.sprite_hue_rotate,
+              //   name: myPlayer.name,
+              //   msg,
+              // })
             }}
             onEsc={() => setShowChatDrawer(false)}
           />
@@ -319,9 +448,13 @@ function Game({ myPlayer }: GameProps) {
     </div>
   )
 
-  const onTouch = (dir: EventPlayerInput['dir']) => async () => {
-    fireGlobalGameEvent({ type: 'player_input', uid: myPlayer.id, dir })
-  }
+  const onTouch = useCallback(
+    (dir: 'L' | 'R') => async () => {
+      if (!myPiece) return
+      fireGlobalGameEvent({ type: 'set_player_position', id: myId, x: myPiece.x + (dir === 'L' ? -1 : 1) })
+    },
+    [myPiece?.x],
+  )
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />
 

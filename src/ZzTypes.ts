@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react'
-import { DB_Player } from './ZzDBTypes'
+import { DB_ChatMessage, DB_Map, DB_Player, DB_PlayerPosition } from './ZzDBTypes'
 
 type GameState = {
   pieces: { [id: string]: PieceState | EntityState | BeastState | PlayerState }
@@ -29,18 +29,11 @@ type PlayerState = BeastState & {
   name: string
 }
 
-type EventAddPlayer = { type: 'add_player' } & DB_Player
-type EventRemovePlayer = { type: 'remove_player'; uid: string }
-type EventPlayerInput = { type: 'player_input'; uid: string; dir: 'L' | 'R' }
-type EventPlayerChat = {
-  type: 'player_chat'
-  uid: string
-  name: string
-  sprite: string
-  hueRotate: number
-  msg: string
-}
-type GameEvent = EventAddPlayer | EventRemovePlayer | EventPlayerInput | EventPlayerChat
+type EventSetPlayer = { type: 'set_player' } & DB_Player
+type EventRemovePlayer = { type: 'remove_player' } & Pick<DB_Player, 'id'>
+type EventSetPlayerPosition = { type: 'set_player_position' } & Pick<DB_Player, 'id'> & DB_PlayerPosition
+type EventChatMessage = { type: 'chat_message' } & Omit<DB_ChatMessage, 'id'> & { map_id: DB_Map['id'] }
+type GameEvent = EventSetPlayer | EventRemovePlayer | EventSetPlayerPosition | EventChatMessage
 
 export type {
   GameState,
@@ -48,9 +41,9 @@ export type {
   EntityState,
   BeastState,
   PlayerState,
-  EventAddPlayer,
+  EventSetPlayer,
   EventRemovePlayer,
-  EventPlayerInput,
-  EventPlayerChat,
+  EventSetPlayerPosition,
+  EventChatMessage,
   GameEvent,
 }

@@ -13,10 +13,10 @@ type DB_PlayerItems = {
 type DB_PlayerFriends = {
   players: { [player_id: string]: true }
 }
-
-type DB_MapPlayer = {
+type DB_PlayerPosition = {
   x: number
 }
+
 type DB_Map = {
   id: string
   players: { [player_id: string]: true }
@@ -44,9 +44,9 @@ type DB = {
   players: { [player_id: string]: DB_Player }
   player_items: { [player_id: string]: DB_PlayerItems }
   player_friends: { [player_id: string]: DB_PlayerFriends }
+  player_positions: { [player_id: string]: DB_PlayerPosition }
 
   maps: { [map_id: string]: DB_Map }
-  map_players: { [player_id: string]: DB_MapPlayer }
 
   chat_messages: { [message_id: string]: DB_ChatMessage }
 
@@ -59,10 +59,10 @@ export type {
   DB_Player,
   DB_PlayerItems,
   DB_PlayerFriends,
-  DB_MapPlayer,
-  DB_ChatMessage,
+  DB_PlayerPosition,
   DB_Map,
-  DB_Party,
+  DB_ChatMessage,
   DB_Quest,
+  DB_Party,
   DB,
 }

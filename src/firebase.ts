@@ -42,18 +42,20 @@ const getCurrentUserID = () => auth.currentUser?.uid
 const dbRef = (path?: string | undefined) => ref(db, path)
 
 const dbSet = <T = unknown>(path: string | undefined, value: T) => set(dbRef(path), value)
-const dbOnlineOnlySet = <T = unknown>(path: string | undefined, value: T) => {
+const dbSetWhileOnline = <T = unknown>(path: string | undefined, value: T) => {
   dbSet(path, value)
   onDisconnect(dbRef(path)).remove()
 }
 
 const dbPush = <T = unknown>(path: string | undefined, value: T) => push(dbRef(path), value)
-const dbOnlineOnlyPush = <T = unknown>(path: string | undefined, value: T) => {
-  onDisconnect(dbPush(path, value)).remove()
+const dbPushWhileOnline = <T = unknown>(path: string | undefined, value: T) => {
+  const r = dbPush(path, value)
+  onDisconnect(r).remove()
+  return r
 }
 
 const dbGet = async <T = unknown>(path: string | undefined): Promise<T | null> => (await get(dbRef(path))).val()
-const dbListen = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
+const dbListen = <T = unknown>(path: string | undefined, callback: (t: T | null) => void) =>
   onValue(dbRef(path), snapshot => callback(snapshot.val()))
 
 const dbAdded = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
@@ -86,9 +88,9 @@ export {
   dbRef,
   dbGet,
   dbSet,
-  dbOnlineOnlySet,
+  dbSetWhileOnline,
   dbPush,
-  dbOnlineOnlyPush,
+  dbPushWhileOnline,
   dbListen,
   dbAdded,
   onDisconnect,
