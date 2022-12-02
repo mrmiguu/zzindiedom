@@ -12,5 +12,22 @@
       "enabled": true
     },
     "singleProjectMode": true
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   }
 }

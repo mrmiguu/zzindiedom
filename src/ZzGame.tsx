@@ -107,7 +107,7 @@ function Game({ myPlayer }: GameProps) {
       >
         <span style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}>{sprite}</span> {name}: {msg}
       </div>,
-      { className: 'bg-transparent drop-shadow-none shadow-none', duration },
+      { className: '!bg-transparent !drop-shadow-none !shadow-none', duration },
     )
   }
 
