@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import sounds from './sounds'
 
@@ -13,6 +13,7 @@ type ChatDrawerProps = {
 
 function ChatDrawer({ onSubmit, onEsc }: ChatDrawerProps) {
   const { register, handleSubmit, reset } = useForm<FormData>()
+  const ignoreBlurRef = useRef(false)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -37,12 +38,20 @@ function ChatDrawer({ onSubmit, onEsc }: ChatDrawerProps) {
           placeholder="Send message..."
           autoComplete="off"
           autoFocus
+          onFocus={() => (ignoreBlurRef.current = false)}
+          onBlur={e => {
+            if (ignoreBlurRef.current) e.target.focus()
+            else onEsc()
+          }}
         />
 
         <button
           className="p-2 grayscale brightness-[99] leading-none rounded-full border-2 border-white hover:opacity-90 active:animate-ping"
           type="submit"
-          onMouseDown={e => sounds.button.then(s => s.play())}
+          onMouseDown={e => {
+            ignoreBlurRef.current = true
+            sounds.button.then(s => s.play())
+          }}
         >
           Send
         </button>

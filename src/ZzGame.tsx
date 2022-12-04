@@ -91,8 +91,8 @@ function Game({ myPlayer }: GameProps) {
   }, [sceneryIDs, tiles, mapId])
 
   const sendChat = (uid: string, sprite: string, spriteHueShiftDeg: number, name: string, msg: string) => {
-    const wordsPerSec = 2
-    const duration = (1000 * max(5, msg.split(' ').length)) / wordsPerSec
+    const wordsPerSec = 1
+    const duration = (1000 * max(10, msg.split(' ').length)) / wordsPerSec
 
     const myMsg = uid === myId
 
@@ -102,7 +102,7 @@ function Game({ myPlayer }: GameProps) {
 
     toast(
       <div
-        className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-xs`}
+        className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-base`}
         style={{ width, transform: `translate(${translateX}px)` }}
       >
         <span style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}>{sprite}</span> {name}: {msg}
@@ -418,14 +418,6 @@ function Game({ myPlayer }: GameProps) {
                 msg,
                 timestamp: `${Date.now()}`,
               })
-              // fireGlobalGameEvent({
-              //   type: 'player_chat',
-              //   uid: myId,
-              //   sprite: myPlayer.sprite_emoji,
-              //   hueRotate: myPlayer.sprite_hue_rotate,
-              //   name: myPlayer.name,
-              //   msg,
-              // })
             }}
             onEsc={() => setShowChatDrawer(false)}
           />
@@ -433,6 +425,15 @@ function Game({ myPlayer }: GameProps) {
       </div>
     </div>
   )
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (showChatDrawer) return
+      if (e.key === 'Enter') setShowChatDrawer(true)
+    }
+    addEventListener('keydown', onKeyDown)
+    return () => removeEventListener('keydown', onKeyDown)
+  }, [showChatDrawer])
 
   const sideButtonsLayer = (
     <div className="absolute flex items-end justify-end w-full h-full pointer-events-none">
