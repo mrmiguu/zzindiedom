@@ -91,8 +91,8 @@ function Game({ myPlayer }: GameProps) {
   }, [sceneryIDs, tiles, mapId])
 
   const sendChat = (uid: string, sprite: string, spriteHueShiftDeg: number, name: string, msg: string) => {
-    const wordsPerSec = 1
-    const duration = (1000 * max(10, msg.split(' ').length)) / wordsPerSec
+    const wordsPerSec = 2
+    const duration = (1000 * max(20, msg.split(' ').length)) / wordsPerSec
 
     const myMsg = uid === myId
 
