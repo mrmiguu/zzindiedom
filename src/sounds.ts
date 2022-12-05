@@ -14,6 +14,7 @@ const sounds = {
   hit5: unpackDynamicImport(soundImports['./sounds/main2b.dsp.wav']!).then(src => new Howl({ src, volume: 0.1 })),
   death: unpackDynamicImport(soundImports['./sounds/main5aL.dsp.wav']!).then(src => new Howl({ src, volume: 0.2 })),
   button: unpackDynamicImport(soundImports['./sounds/maincd.dsp.wav']!).then(src => new Howl({ src, volume: 0.2 })),
+  coin: unpackDynamicImport(soundImports['./sounds/main61.dsp.wav']!).then(src => new Howl({ src, volume: 0.2 })),
 } as const
 
 const hitSounds = ['hit1', 'hit2', 'hit3', 'hit4', 'hit5'] as const

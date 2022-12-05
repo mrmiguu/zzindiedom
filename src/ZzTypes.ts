@@ -10,15 +10,16 @@ type PieceState = {
   id: string
   x: number
   xTimestamp?: number
-  static?: 'foreground' | 'background' // TODO: background is broken
+  static?: 'foreground' | 'background' | 'item'
   important?: boolean
   className?: string
+  disabled?: boolean
   style?: CSSProperties
 }
 
 type EntityState = PieceState & {
   sprite: string
-  spriteHueShiftDeg: number
+  hueRotate?: number
 }
 
 type BeastState = EntityState & {

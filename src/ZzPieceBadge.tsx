@@ -2,7 +2,7 @@ import { PropsWithChildren } from 'react'
 import sounds from './sounds'
 import { BeastState, EntityState, PlayerState } from './ZzTypes'
 
-type OnlySprite = Pick<EntityState, 'sprite' | 'spriteHueShiftDeg'>
+type OnlySprite = Pick<EntityState, 'sprite' | 'hueRotate'>
 
 type PieceBadgeProps = PropsWithChildren<
   (OnlySprite | EntityState | BeastState | PlayerState) & {
@@ -11,7 +11,7 @@ type PieceBadgeProps = PropsWithChildren<
   }
 >
 
-function PieceBadge({ sprite, spriteHueShiftDeg, size, onClick, children }: PieceBadgeProps) {
+function PieceBadge({ sprite, hueRotate, size, onClick, children }: PieceBadgeProps) {
   const sizeCls = size === 12 ? 'w-12 h-12' : size === 16 ? 'w-16 h-16' : size === 20 ? 'w-20 h-20' : 'w-24 h-24'
 
   return (
@@ -29,7 +29,7 @@ function PieceBadge({ sprite, spriteHueShiftDeg, size, onClick, children }: Piec
           className={`${
             size === 12 ? 'text-[48px]' : size === 16 ? 'text-[64px]' : size === 20 ? 'text-[80px]' : 'text-[96px]'
           } leading-none`}
-          style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}
+          style={{ filter: `hue-rotate(${hueRotate}deg)` }}
         >
           {sprite}
         </div>

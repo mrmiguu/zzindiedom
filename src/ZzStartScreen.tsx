@@ -42,7 +42,7 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
       defaultValue={shuffledPlayerSprites[0]!}
       rules={{ required: true }}
       render={({ field: { onChange, value: sprite } }) => (
-        <PieceBadge sprite={sprite} spriteHueShiftDeg={hueRotate}>
+        <PieceBadge sprite={sprite} hueRotate={hueRotate}>
           <div className="absolute flex items-end justify-end w-full h-full translate-x-3">
             <button
               className={`w-10 h-10 text-4xl rounded-full ${animateDice && 'animate-dice-bounce'}`}

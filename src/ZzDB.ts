@@ -1,10 +1,14 @@
 import { dbGet, dbListen, dbPushWhileOnline, dbSet, dbSetWhileOnline } from './firebase'
-import { DB_ChatMessage, DB_Map, DB_Player, DB_PlayerPosition } from './ZzDBTypes'
+import { DB_ChatMessage, DB_Map, DB_Player, DB_PlayerItems, DB_PlayerPosition } from './ZzDBTypes'
 
 const db_getPlayer = (playerId: string) => dbGet<DB_Player>(`players/${playerId}`)
 const db_setPlayer = (playerId: string, player: DB_Player) => dbSet(`players/${playerId}`, player)
 const db_playerListener = (playerId: string, onPlayer: (player: DB_Player | null) => void) =>
   dbListen(`players/${playerId}`, onPlayer)
+const db_getPlayerItems = (playerId: string) =>
+  dbGet<DB_PlayerItems['item_counts']>(`player_items/${playerId}/item_counts`)
+const db_setPlayerItemCount = (playerId: string, item: string, count: DB_PlayerItems['item_counts'][string]) =>
+  dbSet(`player_items/${playerId}/item_counts/${item}`, count)
 const db_getPlayerPosition = (playerId: string) => dbGet<DB_PlayerPosition>(`player_positions/${playerId}`)
 const db_setPlayerPosition = (playerId: string, position: DB_PlayerPosition) =>
   dbSet(`player_positions/${playerId}`, position)
@@ -39,6 +43,8 @@ export {
   db_getPlayer,
   db_setPlayer,
   db_playerListener,
+  db_getPlayerItems,
+  db_setPlayerItemCount,
   db_getPlayerPosition,
   db_setPlayerPosition,
   db_getOrSetPlayerPosition,

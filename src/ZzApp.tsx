@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { useAsync } from 'react-use'
 import { auth, signInAnonymously } from './firebase'
 import { playUTCSong, useUTCMusic } from './utcMusic'
-import { log, sleep } from './utils'
+import { log } from './utils'
 import { db_getPlayer, db_setPlayer } from './ZzDB'
 import { DB_Player } from './ZzDBTypes'
 import Game from './ZzGame'
@@ -15,8 +15,8 @@ function App() {
   const [myPlayer, setMyPlayer] = useState<DB_Player | null>(null)
 
   const setAppState = async (state: Parameters<typeof _setAppState>[0]) => {
-    _setAppState(null)
-    await sleep(2000)
+    // _setAppState(null)
+    // await sleep(2000)
     _setAppState(state)
   }
 

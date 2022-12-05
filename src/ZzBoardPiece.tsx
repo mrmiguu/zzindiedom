@@ -7,9 +7,10 @@ type BoardPieceProps = (PieceState | EntityState | BeastState | PlayerState) & {
 }
 
 function BoardPiece(props: BoardPieceProps) {
-  const { z } = props
+  const { z, disabled } = props
 
-  const zDepth = props.static === 'background' ? -1 : props.static === 'foreground' ? 0 : -0.5 + z
+  const zDepth =
+    props.static === 'background' ? -1 : props.static === 'foreground' ? 0 : props.static === 'item' ? -0.5 : -0.5 + z
 
   const animationDelay = useMemo(() => `${3 * random()}s`, [])
 
@@ -61,18 +62,25 @@ function BoardPiece(props: BoardPieceProps) {
           }}
         >
           <div
-            className={`flex justify-center w-16 origin-bottom preserve-3d ${!props.static && 'animate-breathe'}`}
-            style={{
-              animationDelay,
-              filter: 'spriteHueShiftDeg' in props ? `hue-rotate(${props.spriteHueShiftDeg}deg)` : undefined,
-            }}
+            className={`preserve-3d ${props.static === 'item' && 'animate-piece-spin'} ${
+              disabled && 'opacity-10 grayscale brightness-50'
+            }`}
+            style={{ animationDelay }}
           >
-            <div className={`preserve-3d ${props.className}`} style={props.style}>
-              {'sprite' in props && props.sprite}
+            <div
+              className={`flex justify-center w-16 origin-bottom preserve-3d ${!props.static && 'animate-breathe'}`}
+              style={{
+                animationDelay,
+                filter: 'hueRotate' in props ? `hue-rotate(${props.hueRotate}deg)` : undefined,
+              }}
+            >
+              <div className={`preserve-3d ${props.className}`} style={props.style}>
+                {'sprite' in props && props.sprite}
+              </div>
             </div>
-          </div>
 
-          <div className="absolute top-0 -translate-x-1/2 -translate-y-full left-1/2">{headTag}</div>
+            <div className="absolute top-0 -translate-x-1/2 -translate-y-full left-1/2">{headTag}</div>
+          </div>
         </div>
       </div>
     </div>

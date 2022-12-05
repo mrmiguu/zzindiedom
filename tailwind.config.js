@@ -7,6 +7,7 @@ module.exports = {
         breathe: 'breathe 3s infinite',
         'dice-bounce': 'dice-bounce 0.375s infinite',
         'dice-spin': 'dice-spin 0.375s linear infinite',
+        'piece-spin': 'piece-spin 5s linear infinite',
         'fade-in-out': 'fade-in-out 0.7s',
         'knockout-flare': 'knockout-flare 2.1s',
       },
@@ -34,6 +35,11 @@ module.exports = {
         'dice-spin': {
           to: {
             transform: 'rotate(360deg)',
+          },
+        },
+        'piece-spin': {
+          to: {
+            transform: 'rotate3d(0,1,0,360deg)',
           },
         },
         'fade-in-out': {

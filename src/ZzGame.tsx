@@ -8,20 +8,22 @@ import useWindowSize from 'react-use/lib/useWindowSize'
 import { clampN } from './math'
 import sounds from './sounds'
 import { playUTCSong } from './utcMusic'
-import { keys, log, max, min, pickRandom, random, stringify, values } from './utils'
+import { entries, keys, log, max, min, pickRandom, random, stringify, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
 import {
   db_getChatMessage,
   db_getOrSetPlayerPosition,
+  db_getPlayerItems,
   db_mapChatMessagesListener,
   db_mapPlayersListener,
   db_playerListener,
   db_playerPositionListener,
   db_pushMapChatMessageWhileOnline,
   db_setMapPlayerWhileOnline,
+  db_setPlayerItemCount,
   db_setPlayerPosition,
 } from './ZzDB'
-import { DB, DB_Map, DB_Player } from './ZzDBTypes'
+import { DB, DB_Map, DB_Player, DB_PlayerItems } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, playerSprites } from './ZzSprites'
@@ -54,6 +56,9 @@ function Game({ myPlayer }: GameProps) {
     [tiles],
   )
 
+  const coinIDs = useMemo(() => [...Array(~~(tiles * 0.2))].map((_, i) => `coin${`${i}`.padStart(3, '0')}`), [tiles])
+  const rareItemIDs = useMemo(() => [...Array(1)].map((_, i) => `rareItem${`${i}`.padStart(3, '0')}`), [tiles])
+
   const cpuPieces = useMemo(() => {
     const seed = `${mapId}:cpuPieces`
 
@@ -63,7 +68,7 @@ function Game({ myPlayer }: GameProps) {
         [id]: {
           id,
           sprite: pickRandom(playerSprites, { seed }),
-          spriteHueShiftDeg: 360 * random({ seed }),
+          hueRotate: 360 * random({ seed }),
           x: ~~(tiles * random({ seed })),
           xTimestamp: 0,
         },
@@ -81,7 +86,7 @@ function Game({ myPlayer }: GameProps) {
         [id]: {
           id,
           sprite: pickRandom(cityScenerySprites, { seed }),
-          spriteHueShiftDeg: 0,
+          hueRotate: 0,
           x: 1 + ~~((tiles - 1) * random({ seed })),
           static: random({ seed }) < 0.5 ? 'background' : 'foreground',
         },
@@ -90,7 +95,45 @@ function Game({ myPlayer }: GameProps) {
     )
   }, [sceneryIDs, tiles, mapId])
 
-  const sendChat = (uid: string, sprite: string, spriteHueShiftDeg: number, name: string, msg: string) => {
+  const coinPieces = useMemo(() => {
+    const seed = `${mapId}:coins`
+    const xs = [...Array(tiles).keys()].sort(() => random({ seed }) - 0.5)
+
+    return coinIDs.reduce<{ [id: string]: PieceState }>(
+      (pieces, id) => ({
+        ...pieces,
+        [id]: {
+          id,
+          sprite: '🪙',
+          x: xs.pop()!, // make sure there aren't more coin IDs than tiles
+          static: 'item',
+          className: 'text-3xl',
+        },
+      }),
+      {},
+    )
+  }, [coinIDs, tiles, mapId])
+
+  const rareItemPieces = useMemo(() => {
+    const seed = `${mapId}:rareItems`
+    const xs = [...Array(tiles).keys()].sort(() => random({ seed }) - 0.5)
+
+    return rareItemIDs.reduce<{ [id: string]: PieceState }>(
+      (pieces, id) => ({
+        ...pieces,
+        [id]: {
+          id,
+          sprite: '🎁',
+          x: xs.pop()!, // make sure there aren't more coin IDs than tiles
+          static: 'item',
+          className: 'text-3xl',
+        },
+      }),
+      {},
+    )
+  }, [rareItemIDs, tiles, mapId])
+
+  const sendChat = (uid: string, sprite: string, hueRotate: number | undefined, name: string, msg: string) => {
     const wordsPerSec = 2
     const duration = (1000 * max(20, msg.split(' ').length)) / wordsPerSec
 
@@ -105,11 +148,17 @@ function Game({ myPlayer }: GameProps) {
         className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-base`}
         style={{ width, transform: `translate(${translateX}px)` }}
       >
-        <span style={{ filter: `hue-rotate(${spriteHueShiftDeg}deg)` }}>{sprite}</span> {name}: {msg}
+        <span style={{ filter: hueRotate ? `hue-rotate(${hueRotate}deg)` : undefined }}>{sprite}</span> {name}: {msg}
       </div>,
       { className: '!bg-transparent !drop-shadow-none !shadow-none', duration },
     )
   }
+
+  const myItemsRef = useRef<DB_PlayerItems['item_counts']>()
+  useAsync(async () => {
+    const items = (await db_getPlayerItems(myId)) ?? {}
+    myItemsRef.current = items
+  }, [myId])
 
   const [gameState, fireLocalGameEvent] = useReducer<Reducer<GameState, GameEvent>>(
     (state, event) => {
@@ -121,7 +170,7 @@ function Game({ myPlayer }: GameProps) {
               name: event.name,
               level: event.exp,
               sprite: event.sprite_emoji,
-              spriteHueShiftDeg: event.sprite_hue_rotate,
+              hueRotate: event.sprite_hue_rotate,
               x: 0,
               xTimestamp: 0,
             }
@@ -141,19 +190,37 @@ function Game({ myPlayer }: GameProps) {
             target.x = event.x
             target.xTimestamp = Date.now()
 
-            // for (const id in state.pieces) {
-            //   const piece = state.pieces[id]!
-            //   if (piece.id === target.id) continue
-            //   if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
-            //   // toast('💥')
-            //   // delete state.pieces[id]
-            // }
+            for (const id in state.pieces) {
+              const piece = state.pieces[id]!
+
+              if (piece.id === target.id) continue
+              if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
+              if (piece.static !== 'item') continue
+              if (!('sprite' in piece)) continue
+              if (piece.disabled) continue
+
+              const { sprite } = piece
+              toast(sprite, { duration: 500 })
+              sounds.coin.then(s => s.play())
+
+              if (target.id === myId) {
+                piece.disabled = true
+
+                if (myItemsRef.current) {
+                  const count = myItemsRef.current[sprite] ?? 0
+                  const newCount = count + 1
+
+                  myItemsRef.current[sprite] = newCount
+                  db_setPlayerItemCount(target.id, sprite, newCount)
+                }
+              }
+            }
           })
 
         case 'chat_message':
           const piece = state.pieces[event.player_id]
-          if (piece && 'sprite' in piece && 'spriteHueShiftDeg' in piece && 'name' in piece) {
-            sendChat(event.player_id, piece.sprite, piece.spriteHueShiftDeg, piece.name, event.msg)
+          if (piece && 'sprite' in piece && 'hueRotate' in piece && 'name' in piece) {
+            sendChat(event.player_id, piece.sprite, piece.hueRotate, piece.name, event.msg)
           }
           break
 
@@ -167,6 +234,8 @@ function Game({ myPlayer }: GameProps) {
       pieces: {
         ...cpuPieces,
         ...sceneryPieces,
+        ...coinPieces,
+        ...rareItemPieces,
         warp001: {
           id: 'warp001',
           x: 2,
@@ -376,17 +445,26 @@ function Game({ myPlayer }: GameProps) {
                 key={entity.id}
                 size={12}
                 sprite={entity.sprite}
-                spriteHueShiftDeg={entity.spriteHueShiftDeg}
+                hueRotate={entity.hueRotate}
                 onClick={
                   'name' in entity
-                    ? () => {
-                        const filter = `hue-rotate(${entity.spriteHueShiftDeg}deg)`
+                    ? async () => {
+                        const items = (await db_getPlayerItems(entity.id)) ?? {}
+
                         toast(
                           <div>
                             <div>
-                              <span style={{ filter }}>{entity.sprite}</span> {entity.name}
+                              <span style={{ filter: `hue-rotate(${entity.hueRotate}deg)` }}>{entity.sprite}</span>{' '}
+                              {entity.name}
                             </div>
                             <div>Lv. {entity.level}</div>
+                            <br />
+                            {entries(items).map(([item, count]) => (
+                              <span>
+                                {count}
+                                {item}{' '}
+                              </span>
+                            ))}
                           </div>,
                         )
                       }
