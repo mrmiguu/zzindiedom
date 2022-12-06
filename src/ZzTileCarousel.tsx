@@ -15,29 +15,33 @@ function TileCarousel({ tiles, iCamera, cameraAngle, pieces, zIndexes }: TileCar
   const pxTile = 64
   const pxInradius = polygonInradius(tiles, pxTile)
 
+  const tileColorClassForYellow = 'bg-[#F9DC4B] border-yellow-900'
+  const tileColorClassForWhite = 'bg-white border-black'
+  const tileColorClass = tileColorClassForWhite
+
   const tileEls = [...Array(tiles)].map((_, i) => {
-    const tileTop = <div className="absolute bg-[#F9DC4B] w-full h-full border border-yellow-900 preserve-3d" />
+    const tileTop = <div className={`absolute ${tileColorClass} w-full h-full border border-yellow-900 preserve-3d`} />
     const tileFront = (
       <div
-        className="absolute bg-[#F9DC4B] w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d"
+        className={`absolute ${tileColorClass} w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d`}
         style={{ transform: `rotateX(-90deg)` }}
       />
     )
     const tileBack = (
       <div
-        className="absolute bg-[#F9DC4B] w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d"
+        className={`absolute ${tileColorClass} w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d`}
         style={{ transform: `rotateX(-90deg) translateZ(-64px)` }}
       />
     )
     const tileLSide = (
       <div
-        className="absolute bg-[#F9DC4B] w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d"
+        className={`absolute ${tileColorClass} w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d`}
         style={{ transform: `rotateX(-90deg) rotateY(90deg) translate3d(32px, 0, -32px)` }}
       />
     )
     const tileRSide = (
       <div
-        className="absolute bg-[#F9DC4B] w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d"
+        className={`absolute ${tileColorClass} w-full top-full border border-yellow-900 origin-top h-[24px] preserve-3d`}
         style={{ transform: `rotateX(-90deg) rotateY(90deg) translate3d(32px, 0, 32px)` }}
       />
     )

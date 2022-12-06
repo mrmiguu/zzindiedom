@@ -41,7 +41,7 @@ function App() {
   useUTCMusic()
 
   useEffect(() => {
-    playUTCSong('STRAWBERRY_FLAVOR_LOVE')
+    playUTCSong('Silent_Night_Instrumental')
   }, [])
 
   switch (appState) {

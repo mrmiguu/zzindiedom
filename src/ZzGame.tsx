@@ -7,7 +7,6 @@ import useWindowSize from 'react-use/lib/useWindowSize'
 
 import { clampN } from './math'
 import sounds from './sounds'
-import { playUTCSong } from './utcMusic'
 import { entries, keys, log, max, min, pickRandom, random, stringify, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
 import {
@@ -25,6 +24,7 @@ import {
 } from './ZzDB'
 import { DB, DB_Map, DB_Player, DB_PlayerItems } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
+import Particles from './ZzParticles'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel from './ZzTileCarousel'
@@ -377,12 +377,14 @@ function Game({ myPlayer }: GameProps) {
 
   const { pieces } = gameState
 
-  useEffect(() => {
-    playUTCSong('LEMON_CAKE')
-  }, [])
+  // useEffect(() => {
+  //   playUTCSong('O_Come_O_Come_Emmanuel')
+  // }, [])
 
+  const bgLayerClassForBlueSky = 'from-[#36D6ED] to-[#C8F6FF]'
+  const bgLayerClassForNightSky = 'from-[#03102C] to-[#265A8E]'
   const bgLayer = (
-    <div className="absolute w-full h-full bg-gradient-to-b from-[#36D6ED] to-[#C8F6FF] pointer-events-none" />
+    <div className={`absolute w-full h-full bg-gradient-to-b ${bgLayerClassForNightSky} pointer-events-none`} />
   )
 
   const startAI = useCallback(
@@ -538,9 +540,11 @@ function Game({ myPlayer }: GameProps) {
   const [keyArrowLeft] = useKeyPress('ArrowLeft')
   const [keyArrowRight] = useKeyPress('ArrowRight')
   useEffect(() => {
+    if (showChatDrawer) return
     if (keyArrowLeft) onTouch('L')()
   }, [keyArrowLeft])
   useEffect(() => {
+    if (showChatDrawer) return
     if (keyArrowRight) onTouch('R')()
   }, [keyArrowRight])
 
@@ -556,6 +560,8 @@ function Game({ myPlayer }: GameProps) {
     />
   )
 
+  const particles = <Particles />
+
   return (
     <div className="absolute w-full h-full overflow-hidden" style={{ perspective: `${perspective}px` }}>
       {bgLayer}
@@ -564,6 +570,7 @@ function Game({ myPlayer }: GameProps) {
       {badgesLayer}
       {sideButtonsLayer}
       {chatDrawerLayer}
+      {particles}
     </div>
   )
 }

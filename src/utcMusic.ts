@@ -7,38 +7,44 @@ import { coordinatedUniversalMilliseconds, unpackDynamicImport } from './utils'
 const musicImports = import.meta.glob<{ default: string }>('./music/**/*')
 
 const music = {
-  APPLE_CINNAMON: unpackDynamicImport(musicImports['./music/APPLE CINNAMON.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  CUTE_AVALANCHE: unpackDynamicImport(musicImports['./music/CUTE AVALANCHE.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  GOLDEN_HOUR: unpackDynamicImport(musicImports['./music/GOLDEN HOUR.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  STRAWBERRY_FLAVOR_LOVE: unpackDynamicImport(musicImports['./music/STRAWBERRY FLAVOR LOVE.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  PENGUINS: unpackDynamicImport(musicImports['./music/PENGUINS.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  SUGAR_COOKIE_PIANO: unpackDynamicImport(musicImports['./music/SUGAR COOKIE (PIANO).mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  HOME: unpackDynamicImport(musicImports['./music/HOME.mp3']!).then(src => new Howl({ src, volume: 0.2, loop: true })),
-  MR_SUNNY_FACE: unpackDynamicImport(musicImports['./music/MR SUNNY FACE.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  PLAY_WITH_ME: unpackDynamicImport(musicImports['./music/PLAY WITH ME.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  SUGAR_COOKIE: unpackDynamicImport(musicImports['./music/SUGAR COOKIE.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  LEMON_CAKE: unpackDynamicImport(musicImports['./music/LEMON CAKE.mp3']!).then(
-    src => new Howl({ src, volume: 0.2, loop: true }),
-  ),
-  YUMMY_FLAVOR: unpackDynamicImport(musicImports['./music/YUMMY FLAVOR.mp3']!).then(
+  // APPLE_CINNAMON: unpackDynamicImport(musicImports['./music/APPLE CINNAMON.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // CUTE_AVALANCHE: unpackDynamicImport(musicImports['./music/CUTE AVALANCHE.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // GOLDEN_HOUR: unpackDynamicImport(musicImports['./music/GOLDEN HOUR.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // STRAWBERRY_FLAVOR_LOVE: unpackDynamicImport(musicImports['./music/STRAWBERRY FLAVOR LOVE.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // PENGUINS: unpackDynamicImport(musicImports['./music/PENGUINS.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // SUGAR_COOKIE_PIANO: unpackDynamicImport(musicImports['./music/SUGAR COOKIE (PIANO).mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // HOME: unpackDynamicImport(musicImports['./music/HOME.mp3']!).then(src => new Howl({ src, volume: 0.2, loop: true })),
+  // MR_SUNNY_FACE: unpackDynamicImport(musicImports['./music/MR SUNNY FACE.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // PLAY_WITH_ME: unpackDynamicImport(musicImports['./music/PLAY WITH ME.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // SUGAR_COOKIE: unpackDynamicImport(musicImports['./music/SUGAR COOKIE.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // LEMON_CAKE: unpackDynamicImport(musicImports['./music/LEMON CAKE.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // YUMMY_FLAVOR: unpackDynamicImport(musicImports['./music/YUMMY FLAVOR.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  // O_Come_O_Come_Emmanuel: unpackDynamicImport(musicImports['./music/O_Come_O_Come_Emmanuel.mp3']!).then(
+  //   src => new Howl({ src, volume: 0.2, loop: true }),
+  // ),
+  Silent_Night_Instrumental: unpackDynamicImport(musicImports['./music/Silent_Night_Instrumental.mp3']!).then(
     src => new Howl({ src, volume: 0.2, loop: true }),
   ),
 } as const
@@ -55,7 +61,10 @@ function useUTCMusic() {
 
   const [_currentUTCSong, _playUTCSong] = useState<SongName>()
   currentUTCSong = _currentUTCSong
-  playUTCSong = _playUTCSong
+  playUTCSong = async track => {
+    // await sleep(500)
+    _playUTCSong(track)
+  }
 
   const { value: howlCurrentTrack } = useAsync(async () => {
     if (!_currentUTCSong) return
@@ -103,10 +112,10 @@ function useUTCMusic() {
 
   const fade = (track: Howl, volume: number, dir: 'in' | 'out') => {
     if (dir === 'in') {
-      track.fade(0, volume, fadeDuration)
+      // track.fade(0, volume, fadeDuration)
       track.play()
     } else if (dir === 'out') {
-      track.fade(volume, 0, fadeDuration / 100)
+      // track.fade(volume, 0, fadeDuration / 100)
       track.stop()
       // setTimeout(() => track.stop(), fadeDuration)
     }
@@ -162,4 +171,5 @@ function useUTCMusic() {
   // )
 }
 
+export default music
 export { useUTCMusic, playUTCSong, currentUTCSong }
