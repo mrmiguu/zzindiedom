@@ -2,7 +2,7 @@ import produce, { enablePatches } from 'immer'
 import diff from 'microdiff'
 import { Reducer, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useAsync } from 'react-use'
+import { useAsync, useKeyPress } from 'react-use'
 import useWindowSize from 'react-use/lib/useWindowSize'
 
 import { clampN } from './math'
@@ -534,6 +534,15 @@ function Game({ myPlayer }: GameProps) {
     },
     [myPiece?.x],
   )
+
+  const [keyArrowLeft] = useKeyPress('ArrowLeft')
+  const [keyArrowRight] = useKeyPress('ArrowRight')
+  useEffect(() => {
+    if (keyArrowLeft) onTouch('L')()
+  }, [keyArrowLeft])
+  useEffect(() => {
+    if (keyArrowRight) onTouch('R')()
+  }, [keyArrowRight])
 
   const LRtouchLayer = <LRScreen onL={onTouch('L')} onR={onTouch('R')} />
 
