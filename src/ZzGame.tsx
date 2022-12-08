@@ -475,7 +475,7 @@ function Game({ myPlayer }: GameProps) {
     </div>
   )
 
-  const badgesLayer = !showChatDrawer && (
+  const badgesLayer = !showChatDrawer /* safari fix: flickers over input */ && (
     <div className="absolute flex items-end justify-center w-full h-full pointer-events-none">
       <div className="flex gap-3 p-4">
         {entityNeighbors.map(

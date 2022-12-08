@@ -24,6 +24,7 @@ function PieceBadge({ sprite, hueRotate, size, onClick, children }: PieceBadgePr
     >
       <div className="absolute bottom-0 w-full h-full overflow-hidden border border-white rounded-full w- bg-black/30" />
 
+      {/* safari fix: h-[9999px] hides subtle border top */}
       <div className="absolute flex items-end justify-center w-full h-[9999px] bottom-0 overflow-hidden border-b-2 border-white rounded-full pointer-events-none">
         <div
           className={`${
