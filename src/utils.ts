@@ -16,6 +16,15 @@ const random = ({ seed }: Partial<RandomOptions> = {}) => {
   return _random[key]!()
 }
 
+// https://stackoverflow.com/a/12646864/4656851
+const shuffle = <T>(list: T[], { seed }: Partial<RandomOptions> = {}): T[] => {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = ~~(random({ seed }) * (i + 1))
+    ;[list[i], list[j]] = [list[j]!, list[i]!]
+  }
+  return list
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 const pickRandom = <T>(list: readonly T[], { seed }: Partial<RandomOptions> = {}): T =>
@@ -62,6 +71,7 @@ export {
   keys,
   values,
   entries,
+  shuffle,
   sleep,
   pickRandom,
   urlSearchParams,

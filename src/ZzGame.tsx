@@ -6,7 +6,7 @@ import { useAsync, useKeyPress } from 'react-use'
 
 import { clampN } from './math'
 import sounds from './sounds'
-import { entries, keys, log, max, min, pickRandom, random, stringify, values } from './utils'
+import { entries, keys, log, max, min, pickRandom, random, shuffle, stringify, values } from './utils'
 import ChatDrawer from './ZzChatDrawer'
 import {
   db_getChatMessage,
@@ -25,7 +25,7 @@ import { DB, DB_Map, DB_Player, DB_PlayerItems } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
 import Particles from './ZzParticles'
 import PieceBadge from './ZzPieceBadge'
-import { cityScenerySprites, playerSprites } from './ZzSprites'
+import { christmasMountainScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel, { mapSizes } from './ZzTileCarousel'
 import { GameEvent, GameState, PieceState } from './ZzTypes'
 
@@ -86,7 +86,7 @@ function Game({ myPlayer }: GameProps) {
         ...pieces,
         [id]: {
           id,
-          sprite: pickRandom(cityScenerySprites, { seed }),
+          sprite: pickRandom(christmasMountainScenerySprites, { seed }),
           hueRotate: 0,
           x: 1 + ~~((mapSize - 1) * random({ seed })),
           static: random({ seed }) < 0.5 ? 'background' : 'foreground',
@@ -98,7 +98,7 @@ function Game({ myPlayer }: GameProps) {
 
   const coinPieces = useMemo(() => {
     const seed = `${mapId}:coins`
-    const xs = [...Array(mapSize).keys()].sort(() => random({ seed }) - 0.5)
+    const xs = shuffle([...Array(mapSize).keys()], { seed })
 
     return coinIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({
@@ -117,7 +117,7 @@ function Game({ myPlayer }: GameProps) {
 
   const rareItemPieces = useMemo(() => {
     const seed = `${mapId}:rareItems`
-    const xs = [...Array(mapSize).keys()].sort(() => random({ seed }) - 0.5)
+    const xs = shuffle([...Array(mapSize).keys()], { seed })
 
     return rareItemIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({

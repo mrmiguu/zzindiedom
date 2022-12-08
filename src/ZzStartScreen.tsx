@@ -3,14 +3,14 @@ import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import sounds from './sounds'
-import { error, log, random, stringify } from './utils'
+import { error, log, random, shuffle, stringify } from './utils'
 import { DB_Player } from './ZzDBTypes'
 import PieceBadge from './ZzPieceBadge'
 import { PlayerSprite, playerSprites } from './ZzSprites'
 import zzz_svg from './zzz.svg'
 
 const shuffledPlayerSprites = produce<readonly PlayerSprite[]>(playerSprites, playerSpritesDraft => {
-  playerSpritesDraft.sort(() => random() - 0.5)
+  shuffle(playerSpritesDraft)
 })
 
 type CustomizablePlayer = Pick<DB_Player, 'name' | 'sprite_emoji' | 'sprite_hue_rotate'>
