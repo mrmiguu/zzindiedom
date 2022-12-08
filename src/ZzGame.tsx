@@ -159,7 +159,7 @@ function Game({ myPlayer }: GameProps) {
         </div>
       </div>,
       {
-        className: '!bg-transparent !drop-shadow-none !shadow-none w-full max-w-none pointer-events-none mr-8',
+        className: '!bg-transparent !drop-shadow-none !shadow-none w-full max-w-none mr-8',
         duration,
       },
     )
