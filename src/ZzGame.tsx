@@ -146,7 +146,7 @@ function Game({ myPlayer }: GameProps) {
     const justify = myMsg ? 'justify-end' : 'justify-start'
 
     toast(
-      <div className={`pointer-events-none w-full flex ${justify}`}>
+      <div className={`w-full flex ${justify}`}>
         <div className={`${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner break-words`} style={{ maxWidth }}>
           {!myMsg && (
             <>
@@ -158,7 +158,10 @@ function Game({ myPlayer }: GameProps) {
           {msg}
         </div>
       </div>,
-      { className: '!bg-transparent !drop-shadow-none !shadow-none w-full', duration },
+      {
+        className: '!bg-transparent !drop-shadow-none !shadow-none w-full max-w-none pointer-events-none mr-8',
+        duration,
+      },
     )
   }
 
@@ -208,7 +211,7 @@ function Game({ myPlayer }: GameProps) {
               if (piece.disabled) continue
 
               const { sprite } = piece
-              toast(sprite, { duration: 500 })
+              if (target.id === myId) toast(sprite, { duration: 500 })
               sounds.coin.then(s => s.play())
 
               if (target.id === myId) {
@@ -445,7 +448,34 @@ function Game({ myPlayer }: GameProps) {
         )
     : []
 
-  const badgesLayer = (
+  const [showChatDrawer, setShowChatDrawer] = useState(false)
+  const chatDrawerLayer = (
+    <div
+      className={`absolute flex items-end justify-center w-full h-full overflow-hidden ${
+        showChatDrawer ? 'cursor-pointer' : 'pointer-events-none'
+      }`}
+      onClick={() => setShowChatDrawer(false)}
+    >
+      <div className="relative w-full transition-transform ease-linear" onClick={e => e.stopPropagation()}>
+        {showChatDrawer && (
+          <ChatDrawer
+            onSubmit={({ msg }) => {
+              fireGlobalGameEvent({
+                type: 'chat_message',
+                map_id: mapId,
+                player_id: myId,
+                msg,
+                timestamp: `${Date.now()}`,
+              })
+            }}
+            onEsc={() => setShowChatDrawer(false)}
+          />
+        )}
+      </div>
+    </div>
+  )
+
+  const badgesLayer = !showChatDrawer && (
     <div className="absolute flex items-end justify-center w-full h-full pointer-events-none">
       <div className="flex gap-3 p-4">
         {entityNeighbors.map(
@@ -487,33 +517,6 @@ function Game({ myPlayer }: GameProps) {
                 }
               />
             ),
-        )}
-      </div>
-    </div>
-  )
-
-  const [showChatDrawer, setShowChatDrawer] = useState(false)
-  const chatDrawerLayer = (
-    <div
-      className={`absolute flex items-end justify-center w-full h-full overflow-hidden ${
-        showChatDrawer ? 'cursor-pointer' : 'pointer-events-none'
-      }`}
-      onClick={() => setShowChatDrawer(false)}
-    >
-      <div className="relative w-full transition-transform ease-linear" onClick={e => e.stopPropagation()}>
-        {showChatDrawer && (
-          <ChatDrawer
-            onSubmit={({ msg }) => {
-              fireGlobalGameEvent({
-                type: 'chat_message',
-                map_id: mapId,
-                player_id: myId,
-                msg,
-                timestamp: `${Date.now()}`,
-              })
-            }}
-            onEsc={() => setShowChatDrawer(false)}
-          />
         )}
       </div>
     </div>
