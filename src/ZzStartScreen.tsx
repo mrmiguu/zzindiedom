@@ -41,6 +41,7 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
       name="sprite_emoji"
       defaultValue={shuffledPlayerSprites[0]!}
       rules={{ required: true }}
+      key={`${hueRotate}`} // safari-fix: without, hue never updates visually during selection
       render={({ field: { onChange, value: sprite } }) => (
         <PieceBadge sprite={sprite} hueRotate={hueRotate}>
           <div className="absolute flex items-end justify-end w-full h-full translate-x-3">
@@ -55,7 +56,8 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
                 setHueRotate(generateRandomHueRotate())
 
                 const index = shuffledPlayerSprites.indexOf(sprite as PlayerSprite)
-                onChange(shuffledPlayerSprites[(index + 1) % shuffledPlayerSprites.length]!)
+                const newSprite = shuffledPlayerSprites[(index + 1) % shuffledPlayerSprites.length]!
+                onChange(newSprite)
               }}
             >
               <div className={`grayscale ${animateDice && 'animate-dice-spin'}`}>🎲</div>
