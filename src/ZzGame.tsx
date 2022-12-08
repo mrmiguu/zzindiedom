@@ -3,7 +3,6 @@ import diff from 'microdiff'
 import { Reducer, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useAsync, useKeyPress } from 'react-use'
-import useWindowSize from 'react-use/lib/useWindowSize'
 
 import { clampN } from './math'
 import sounds from './sounds'
@@ -27,7 +26,7 @@ import LRScreen from './ZzLRScreen'
 import Particles from './ZzParticles'
 import PieceBadge from './ZzPieceBadge'
 import { cityScenerySprites, playerSprites } from './ZzSprites'
-import TileCarousel from './ZzTileCarousel'
+import TileCarousel, { mapSizes } from './ZzTileCarousel'
 import { GameEvent, GameState, PieceState } from './ZzTypes'
 
 enablePatches()
@@ -39,25 +38,27 @@ function Game({ myPlayer }: GameProps) {
   const mapId = myPlayer.map_id
   const perspective = 1024
   const cameraAngle = 75
-  const tiles = 64
 
-  const windowSize = useWindowSize(innerWidth, innerHeight)
+  const mapSize = useMemo(() => pickRandom(mapSizes, { seed: `${mapId}:mapSize` }), [mapId])
 
   const cpuIDs = useMemo(
     () =>
       [
-        /* ...Array(~~(tiles * 0.2)) */
+        /* ...Array(~~(mapSize * 0.2)) */
       ].map((_, i) => `cpu${`${i}`.padStart(3, '0')}`),
-    [tiles],
+    [mapSize],
   )
 
   const sceneryIDs = useMemo(
-    () => [...Array(~~(tiles * 0.2))].map((_, i) => `scenery${`${i}`.padStart(3, '0')}`),
-    [tiles],
+    () => [...Array(~~(mapSize * 0.2))].map((_, i) => `scenery${`${i}`.padStart(3, '0')}`),
+    [mapSize],
   )
 
-  const coinIDs = useMemo(() => [...Array(~~(tiles * 0.2))].map((_, i) => `coin${`${i}`.padStart(3, '0')}`), [tiles])
-  const rareItemIDs = useMemo(() => [...Array(1)].map((_, i) => `rareItem${`${i}`.padStart(3, '0')}`), [tiles])
+  const coinIDs = useMemo(
+    () => [...Array(~~(mapSize * 0.2))].map((_, i) => `coin${`${i}`.padStart(3, '0')}`),
+    [mapSize],
+  )
+  const rareItemIDs = useMemo(() => [...Array(1)].map((_, i) => `rareItem${`${i}`.padStart(3, '0')}`), [mapSize])
 
   const cpuPieces = useMemo(() => {
     const seed = `${mapId}:cpuPieces`
@@ -69,13 +70,13 @@ function Game({ myPlayer }: GameProps) {
           id,
           sprite: pickRandom(playerSprites, { seed }),
           hueRotate: 360 * random({ seed }),
-          x: ~~(tiles * random({ seed })),
+          x: ~~(mapSize * random({ seed })),
           xTimestamp: 0,
         },
       }),
       {},
     )
-  }, [cpuIDs, tiles, mapId])
+  }, [cpuIDs, mapSize, mapId])
 
   const sceneryPieces = useMemo(() => {
     const seed = `${mapId}:sceneryPieces`
@@ -87,17 +88,17 @@ function Game({ myPlayer }: GameProps) {
           id,
           sprite: pickRandom(cityScenerySprites, { seed }),
           hueRotate: 0,
-          x: 1 + ~~((tiles - 1) * random({ seed })),
+          x: 1 + ~~((mapSize - 1) * random({ seed })),
           static: random({ seed }) < 0.5 ? 'background' : 'foreground',
         },
       }),
       {},
     )
-  }, [sceneryIDs, tiles, mapId])
+  }, [sceneryIDs, mapSize, mapId])
 
   const coinPieces = useMemo(() => {
     const seed = `${mapId}:coins`
-    const xs = [...Array(tiles).keys()].sort(() => random({ seed }) - 0.5)
+    const xs = [...Array(mapSize).keys()].sort(() => random({ seed }) - 0.5)
 
     return coinIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({
@@ -105,18 +106,18 @@ function Game({ myPlayer }: GameProps) {
         [id]: {
           id,
           sprite: '🪙',
-          x: xs.pop()!, // make sure there aren't more coin IDs than tiles
+          x: xs.pop()!, // make sure there aren't more coin IDs than mapSize
           static: 'item',
           className: 'text-3xl',
         },
       }),
       {},
     )
-  }, [coinIDs, tiles, mapId])
+  }, [coinIDs, mapSize, mapId])
 
   const rareItemPieces = useMemo(() => {
     const seed = `${mapId}:rareItems`
-    const xs = [...Array(tiles).keys()].sort(() => random({ seed }) - 0.5)
+    const xs = [...Array(mapSize).keys()].sort(() => random({ seed }) - 0.5)
 
     return rareItemIDs.reduce<{ [id: string]: PieceState }>(
       (pieces, id) => ({
@@ -124,33 +125,40 @@ function Game({ myPlayer }: GameProps) {
         [id]: {
           id,
           sprite: '🎁',
-          x: xs.pop()!, // make sure there aren't more coin IDs than tiles
+          x: xs.pop()!, // make sure there aren't more coin IDs than mapSize
           static: 'item',
           className: 'text-3xl',
         },
       }),
       {},
     )
-  }, [rareItemIDs, tiles, mapId])
+  }, [rareItemIDs, mapSize, mapId])
 
   const sendChat = (uid: string, sprite: string, hueRotate: number | undefined, name: string, msg: string) => {
+    const myMsg = uid === myId
+
     const wordsPerSec = 2
     const duration = (1000 * max(20, msg.split(' ').length)) / wordsPerSec
 
-    const myMsg = uid === myId
+    const maxWidth = 222
 
-    const width = 222
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
-    const translateX = myMsg ? windowSize.width / 2 - width / 2 - 64 : -windowSize.width / 2 + width / 2 + 16
+    const justify = myMsg ? 'justify-end' : 'justify-start'
 
     toast(
-      <div
-        className={`pointer-events-none ${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner text-base`}
-        style={{ width, transform: `translate(${translateX}px)` }}
-      >
-        <span style={{ filter: hueRotate ? `hue-rotate(${hueRotate}deg)` : undefined }}>{sprite}</span> {name}: {msg}
+      <div className={`pointer-events-none w-full flex ${justify}`}>
+        <div className={`${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner break-words`} style={{ maxWidth }}>
+          {!myMsg && (
+            <>
+              <span style={{ filter: hueRotate ? `hue-rotate(${hueRotate}deg)` : undefined }}>{sprite}</span>{' '}
+              <span className="text-xs">{name}</span>
+              <br />
+            </>
+          )}
+          {msg}
+        </div>
       </div>,
-      { className: '!bg-transparent !drop-shadow-none !shadow-none', duration },
+      { className: '!bg-transparent !drop-shadow-none !shadow-none w-full', duration },
     )
   }
 
@@ -194,7 +202,7 @@ function Game({ myPlayer }: GameProps) {
               const piece = state.pieces[id]!
 
               if (piece.id === target.id) continue
-              if (clampN(piece.x, tiles) !== clampN(target.x, tiles)) continue
+              if (clampN(piece.x, mapSize) !== clampN(target.x, mapSize)) continue
               if (piece.static !== 'item') continue
               if (!('sprite' in piece)) continue
               if (piece.disabled) continue
@@ -416,7 +424,7 @@ function Game({ myPlayer }: GameProps) {
       values(pieces)
         .filter(p => !p.static)
         .sort((a, b) => {
-          const di = clampN(a.x, tiles) - clampN(b.x, tiles)
+          const di = clampN(a.x, mapSize) - clampN(b.x, mapSize)
           return di === 0 ? (a.xTimestamp ?? 0) - (b.xTimestamp ?? 0) : di
         }),
     [pieces],
@@ -427,13 +435,13 @@ function Game({ myPlayer }: GameProps) {
   const entityNeighbors = myPiece
     ? zIndexes
         .slice(
-          max(0, clampN(myZIndex, tiles) - neighborRadius),
-          min(zIndexes.length, clampN(myZIndex, tiles) + (neighborRadius + 1)),
+          max(0, clampN(myZIndex, mapSize) - neighborRadius),
+          min(zIndexes.length, clampN(myZIndex, mapSize) + (neighborRadius + 1)),
         )
         .filter(
           p =>
-            clampN(p.x, tiles) >= clampN(myPiece.x, tiles) - neighborRadius &&
-            clampN(p.x, tiles) <= clampN(myPiece.x, tiles) + neighborRadius,
+            clampN(p.x, mapSize) >= clampN(myPiece.x, mapSize) - neighborRadius &&
+            clampN(p.x, mapSize) <= clampN(myPiece.x, mapSize) + neighborRadius,
         )
     : []
 
@@ -452,21 +460,26 @@ function Game({ myPlayer }: GameProps) {
                   'name' in entity
                     ? async () => {
                         const items = (await db_getPlayerItems(entity.id)) ?? {}
+                        const itemEntries = entries(items)
 
                         toast(
                           <div>
                             <div>
                               <span style={{ filter: `hue-rotate(${entity.hueRotate}deg)` }}>{entity.sprite}</span>{' '}
-                              {entity.name}
+                              <span className="text-xs">{entity.name}</span>
                             </div>
                             <div>Lv. {entity.level}</div>
-                            <br />
-                            {entries(items).map(([item, count]) => (
-                              <span>
-                                {count}
-                                {item}{' '}
-                              </span>
-                            ))}
+                            {itemEntries.length ? (
+                              <>
+                                <br />
+                                {itemEntries.map(([item, count]) => (
+                                  <span>
+                                    {count}
+                                    {item}{' '}
+                                  </span>
+                                ))}
+                              </>
+                            ) : null}
                           </div>,
                         )
                       }
@@ -554,7 +567,7 @@ function Game({ myPlayer }: GameProps) {
     <TileCarousel
       iCamera={myPiece?.x ?? 0}
       cameraAngle={cameraAngle}
-      tiles={tiles}
+      mapSize={mapSize}
       pieces={pieces}
       zIndexes={zIndexes}
     />
