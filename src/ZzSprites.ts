@@ -122,7 +122,7 @@ const cityScenerySprites = [
   '⛪️',
 ] as const
 
-const christmasMountainScenerySprites = ['🎄', '🌲', '🪨', '🗻'] as const
+const christmasMountainScenerySprites = ['🎄', '🌲', '🗻', '🏔', '⛰'] as const
 
 type PlayerSprite = typeof playerSprites[number]
 

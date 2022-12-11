@@ -41,9 +41,9 @@ const music = {
   // YUMMY_FLAVOR: unpackDynamicImport(musicImports['./music/YUMMY FLAVOR.mp3']!).then(
   //   src => new Howl({ src, volume: 0.2, loop: true }),
   // ),
-  // O_Come_O_Come_Emmanuel: unpackDynamicImport(musicImports['./music/O_Come_O_Come_Emmanuel.mp3']!).then(
-  //   src => new Howl({ src, volume: 0.2, loop: true }),
-  // ),
+  O_Come_O_Come_Emmanuel: unpackDynamicImport(musicImports['./music/O_Come_O_Come_Emmanuel.mp3']!).then(
+    src => new Howl({ src, volume: 0.2, loop: true }),
+  ),
   Silent_Night_Instrumental: unpackDynamicImport(musicImports['./music/Silent_Night_Instrumental.mp3']!).then(
     src => new Howl({ src, volume: 0.2, loop: true }),
   ),
