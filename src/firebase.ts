@@ -1,5 +1,5 @@
 import { getApp, initializeApp } from 'firebase/app'
-import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth'
+import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth'
 import {
   connectDatabaseEmulator,
   get,
@@ -61,23 +61,23 @@ const dbListen = <T = unknown>(path: string | undefined, callback: (t: T | null)
 const dbAdded = <T = unknown>(path: string | undefined, callback: (t: T) => void) =>
   onChildAdded(dbRef(path), data => callback(data.val()))
 
-onAuthStateChanged(auth, user => {
-  if (!user) return
+// onAuthStateChanged(auth, user => {
+//   if (!user) return
 
-  const { uid } = user
+//   const { uid } = user
 
-  const dbOnlineRef = dbRef(`online/${uid}`)
-  // const dbLastOnlineRef = dbRef(`last_online/${uid}`)
-  const dbConnectedRef = dbRef('.info/connected')
+//   const dbOnlineRef = dbRef(`online/${uid}`)
+//   // const dbLastOnlineRef = dbRef(`last_online/${uid}`)
+//   const dbConnectedRef = dbRef('.info/connected')
 
-  onValue(dbConnectedRef, snap => {
-    if (snap.val() === true) {
-      set(dbOnlineRef, true)
-      onDisconnect(dbOnlineRef).remove()
-      // onDisconnect(dbLastOnlineRef).set(serverTimestamp())
-    }
-  })
-})
+//   onValue(dbConnectedRef, snap => {
+//     if (snap.val() === true) {
+//       set(dbOnlineRef, true)
+//       onDisconnect(dbOnlineRef).remove()
+//       // onDisconnect(dbLastOnlineRef).set(serverTimestamp())
+//     }
+//   })
+// })
 
 export default app
 export {

@@ -10,26 +10,56 @@ import Game from './ZzGame'
 import LoadingScreen from './ZzLoadingScreen'
 import StartScreen from './ZzStartScreen'
 
-function App() {
-  const [appState, _setAppState] = useState<'start_screen' | 'game' | null>(null)
-  const [myPlayer, setMyPlayer] = useState<DB_Player | null>(null)
+// function useFlatTire() {
+//   const ft = useMemo(() => new FlatTire<Database>(), [])
+//   const [db, setDB] = useState(ft.db)
 
-  const setAppState = async (state: Parameters<typeof _setAppState>[0]) => {
-    // _setAppState(null)
-    // await sleep(2000)
-    _setAppState(state)
-  }
+//   const putDB = (...[db, options]: Parameters<typeof ft['put']>) => {
+//     ft.put(db, options)
+//     setDB(ft.db)
+//   }
+
+//   return [db, putDB] as const
+// }
+
+function App() {
+  // const [db, putDB] = useFlatTire()
+  const [appState, setAppState] = useState<'start_screen' | 'game' | null>(null)
+  const [myPlayer, setMyPlayer] = useState<DB_Player | null>(null)
 
   const { value: myId } = useAsync(async () => {
     const { user } = await signInAnonymously(auth)
-
     log(`You signed in (${user.uid})`)
-
     return user.uid
   }, [])
 
   useAsync(async () => {
     if (!myId) return
+
+    // const db = {
+    //   online: {
+    //     [myId]: true,
+    //   },
+    // }
+    // sprinkleKeys(db)
+    // const dbWithArrayedKeys = flattenKeyedData(db)
+    // const flatDB = unarrayFlattenedDataKeys(dbWithArrayedKeys)
+    // dbSet(undefined, flatDB)
+
+    // putDB(
+    //   {
+    //     online: {
+    //       [myId]: true,
+    //     },
+    //   },
+    //   {
+    //     onNewPath(path) {
+    //       onDisconnect(dbRef(path)).remove()
+    //     },
+    //   },
+    // )
+
+    // setAppState('start_screen')
 
     const db_player = await db_getPlayer(myId)
     setMyPlayer(db_player)

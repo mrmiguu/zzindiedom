@@ -23,10 +23,12 @@ import {
 } from './ZzDB'
 import { DB, DB_Map, DB_Player, DB_PlayerItems } from './ZzDBTypes'
 import LRScreen from './ZzLRScreen'
+import { carouselDistanceVolume } from './ZzMath'
 import Particles from './ZzParticles'
 import PieceBadge from './ZzPieceBadge'
 import { christmasMountainScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel, { mapSizes } from './ZzTileCarousel'
+import { textToSpeech } from './ZzTTS'
 import { GameEvent, GameState, PieceState } from './ZzTypes'
 
 enablePatches()
@@ -134,7 +136,14 @@ function Game({ myPlayer }: GameProps) {
     )
   }, [rareItemIDs, mapSize, mapId])
 
-  const sendChat = (uid: string, sprite: string, hueRotate: number | undefined, name: string, msg: string) => {
+  const sendChat = async (
+    uid: string,
+    sprite: string,
+    hueRotate: number | undefined,
+    name: string,
+    msg: string,
+    volume = 1.0,
+  ) => {
     const myMsg = uid === myId
 
     const wordsPerSec = 2
@@ -145,8 +154,10 @@ function Game({ myPlayer }: GameProps) {
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
     const justify = myMsg ? 'justify-end' : 'justify-start'
 
+    await textToSpeech(msg, volume)
+
     toast(
-      <div className={`w-full flex ${justify}`}>
+      <div className={`w-full flex ${justify}`} style={{ opacity: volume }}>
         <div className={`${msgTheme} py-3 px-4 -my-3 rounded-3xl shadow-inner break-words`} style={{ maxWidth }}>
           {!myMsg && (
             <>
@@ -231,7 +242,11 @@ function Game({ myPlayer }: GameProps) {
         case 'chat_message':
           const piece = state.pieces[event.player_id]
           if (piece && 'sprite' in piece && 'hueRotate' in piece && 'name' in piece) {
-            sendChat(event.player_id, piece.sprite, piece.hueRotate, piece.name, event.msg)
+            const myPiece = state.pieces[myId]
+            const theirX = clampN(piece.x, mapSize)
+            const myX = clampN(myPiece?.x ?? piece.x, mapSize)
+            const distVol = carouselDistanceVolume(myX, theirX, mapSize)
+            sendChat(event.player_id, piece.sprite, piece.hueRotate, piece.name, event.msg, distVol)
           }
           break
 

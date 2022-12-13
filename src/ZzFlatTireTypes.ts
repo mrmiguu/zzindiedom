@@ -28,6 +28,10 @@ type ChatMessageData = {
 }
 
 type Database = {
+  online: {
+    [playerId: string]: true
+  }
+
   players: {
     [id: string]: PlayerData
   }

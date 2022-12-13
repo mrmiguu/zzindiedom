@@ -16,9 +16,11 @@ const getListenerKeys = (deepObj: { [key: string]: any }): ListenerKeys => {
   )
 }
 
+const __keys = '__keys'
+
 const putFlatDatabase = <DB extends NestedData>(subset: Subset<DB>, path = '', flatDB: NestedData = {}) => {
   const vdbKeys = getListenerKeys(subset)
-  const keysPath = `${path}__keys`
+  const keysPath = `${path}${__keys}`
 
   flatDB[keysPath] = merge(vdbKeys, flatDB[keysPath] ?? {})
 
@@ -36,17 +38,34 @@ const putFlatDatabase = <DB extends NestedData>(subset: Subset<DB>, path = '', f
   }
 }
 
+type PutOptions = {
+  onNewPath: (path: string) => void
+}
+
 class FlatTire<DB extends NestedData> {
-  private flatDB = { __keys: {} }
+  private flatDB: NestedData = { [__keys]: {} }
 
   public db: Subset<DB> = {}
 
-  put = (subset: Subset<DB>) => {
+  put = (subset: Subset<DB>, options?: Partial<PutOptions>) => {
     const newDB = merge(this.db as any, subset as any) as DB
-    const diffs = diff(this.db, newDB)[0]
-    diffs
     this.db = newDB
-    putFlatDatabase(newDB, '', this.flatDB)
+
+    const flatDB: NestedData = {}
+    putFlatDatabase(newDB, '', flatDB)
+
+    const flatDiffs = diff(this.flatDB, flatDB)
+    for (const diff of flatDiffs) {
+      const path = diff.path[0] as string | undefined
+
+      if (diff.type === 'CREATE') {
+        if (path && !path?.endsWith(__keys)) {
+          options?.onNewPath?.(path)
+        }
+      }
+    }
+
+    this.flatDB = flatDB
   }
 
   getDatabase = () => this.db
