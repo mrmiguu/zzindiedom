@@ -154,7 +154,7 @@ function Game({ myPlayer }: GameProps) {
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
     const justify = myMsg ? 'justify-end' : 'justify-start'
 
-    await textToSpeech(msg, volume)
+    await textToSpeech(msg, volume / 5)
 
     toast(
       <div className={`w-full flex ${justify}`} style={{ opacity: volume }}>

@@ -1,5 +1,4 @@
 import { Howl } from 'howler'
-import { toast } from 'react-hot-toast'
 import { error, log, stringify, values } from './utils'
 
 const voices = {
@@ -125,11 +124,10 @@ const textToSpeech = async (text: string, volume: number) => {
     const json = await resp.json()
 
     if (json.data) await playAudio(json.data, volume)
-    else toast.error(json.error)
+    else throw new Error(json.error)
   } catch (e) {
     if (e instanceof Error) {
-      toast.error(e.message)
-      error(e.message)
+      error(e)
       log(`voice: "${voice}"`)
       log(`text: "${text}"`)
     }
