@@ -9,6 +9,7 @@ import { DB_Player } from './ZzDBTypes'
 import Game from './ZzGame'
 import LoadingScreen from './ZzLoadingScreen'
 import StartScreen from './ZzStartScreen'
+import { reverseVoiceLookup } from './ZzTTS'
 
 // function useFlatTire() {
 //   const ft = useMemo(() => new FlatTire<Database>(), [])
@@ -88,7 +89,8 @@ function App() {
                 You ({customizablePlayer.name}) picked{' '}
                 <span style={{ filter: `hue-rotate(${customizablePlayer.sprite_hue_rotate}deg)` }}>
                   {customizablePlayer.sprite_emoji}
-                </span>
+                </span>{' '}
+                with the {reverseVoiceLookup(customizablePlayer.voice).join(' ')} voice
               </div>,
             )
 

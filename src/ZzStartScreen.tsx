@@ -2,18 +2,21 @@ import produce from 'immer'
 import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import { useAsync } from 'react-use'
 import sounds from './sounds'
-import { error, log, random, shuffle, stringify } from './utils'
+import { error, log, pickRandom, random, shuffle, stringify } from './utils'
+import fetchVoiceSample from './voiceSamples'
 import { DB_Player } from './ZzDBTypes'
 import PieceBadge from './ZzPieceBadge'
 import { PlayerSprite, playerSprites } from './ZzSprites'
+import { voices } from './ZzTTS'
 import zzz_svg from './zzz.svg'
 
 const shuffledPlayerSprites = produce<readonly PlayerSprite[]>(playerSprites, playerSpritesDraft => {
   shuffle(playerSpritesDraft)
 })
 
-type CustomizablePlayer = Pick<DB_Player, 'name' | 'sprite_emoji' | 'sprite_hue_rotate'>
+type CustomizablePlayer = Pick<DB_Player, 'name' | 'sprite_emoji' | 'sprite_hue_rotate' | 'voice'>
 
 type StartScreenProps = {
   onSubmit: (custom: CustomizablePlayer) => void
@@ -24,7 +27,15 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
   const { register, handleSubmit, control } = useForm<CustomizablePlayer>()
 
   const generateRandomHueRotate = () => 360 * random()
+  const generateRandomVoice = () => pickRandom(voices)
   const [hueRotate, setHueRotate] = useState(generateRandomHueRotate())
+  const [voice, setVoice] = useState(generateRandomVoice())
+
+  useAsync(async () => {
+    const sample = await fetchVoiceSample(voice)
+    log(`voice=${voice}`)
+    sample.play()
+  }, [voice])
 
   const gameLogo = (
     <div className="flex flex-col items-center text-black">
@@ -41,7 +52,7 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
       name="sprite_emoji"
       defaultValue={shuffledPlayerSprites[0]!}
       rules={{ required: true }}
-      key={`${hueRotate}`} // safari-fix: without, hue never updates visually during selection
+      key={`${hueRotate}:${voice}`} // safari-fix: without, hue never updates visually during selection
       render={({ field: { onChange, value: sprite } }) => (
         <PieceBadge sprite={sprite} hueRotate={hueRotate}>
           <div className="absolute flex items-end justify-end w-full h-full translate-x-3">
@@ -54,6 +65,7 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
                 setAnimateDice(false)
 
                 setHueRotate(generateRandomHueRotate())
+                setVoice(generateRandomVoice())
 
                 const index = shuffledPlayerSprites.indexOf(sprite as PlayerSprite)
                 const newSprite = shuffledPlayerSprites[(index + 1) % shuffledPlayerSprites.length]!
@@ -190,7 +202,10 @@ function StartScreen({ onSubmit, submitDisabled }: StartScreenProps) {
   )
 
   return (
-    <form className="font-mono" onSubmit={handleSubmit(props => onSubmit({ ...props, sprite_hue_rotate: hueRotate }))}>
+    <form
+      className="font-mono"
+      onSubmit={handleSubmit(props => onSubmit({ ...props, sprite_hue_rotate: hueRotate, voice }))}
+    >
       {bgColor}
       {bgTexture}
       {ui}

@@ -1,7 +1,7 @@
 import { Howl } from 'howler'
 import { error, log, stringify, values } from './utils'
 
-const voices = {
+const voiceLookup = {
   ['English US']: {
     ['Female']: 'en_us_001',
     ['Male 1']: 'en_us_006',
@@ -32,7 +32,7 @@ const voices = {
     ['Male']: 'es_mx_002',
   },
   ['Portuguese BR']: {
-    ['Female 1']: 'br_001',
+    // ['Female 1']: 'br_001',
     ['Female 2']: 'br_003',
     ['Female 3']: 'br_004',
     ['Male']: 'br_005',
@@ -59,32 +59,59 @@ const voices = {
     ['Stormtrooper (Star Wars)']: 'en_us_stormtrooper',
     ['Rocket (Guardians of the Galaxy)']: 'en_us_rocket',
   },
-  ['Singing']: {
-    ['Alto']: 'en_female_f08_salut_damour',
-    ['Tenor']: 'en_male_m03_lobby',
-    ['Sunshine Soon']: 'en_male_m03_sunshine_soon',
-    ['Warmy Breeze']: 'en_female_f08_warmy_breeze',
-    ['Glorious']: 'en_female_ht_f08_glorious',
-    ['It Goes Up']: 'en_male_sing_funny_it_goes_up',
-    ['Chipmunk']: 'en_male_m2_xhxs_m03_silly',
-    ['Dramatic']: 'en_female_ht_f08_wonderful_world',
-  },
+  // ['Singing']: {
+  //   ['Alto']: 'en_female_f08_salut_damour',
+  //   ['Tenor']: 'en_male_m03_lobby',
+  //   ['Sunshine Soon']: 'en_male_m03_sunshine_soon',
+  //   ['Warmy Breeze']: 'en_female_f08_warmy_breeze',
+  //   ['Glorious']: 'en_female_ht_f08_glorious',
+  //   ['It Goes Up']: 'en_male_sing_funny_it_goes_up',
+  //   ['Chipmunk']: 'en_male_m2_xhxs_m03_silly',
+  //   ['Dramatic']: 'en_female_ht_f08_wonderful_world',
+  // },
 } as const
 
-type VoiceCategory = keyof typeof voices
-type EnglishUSVoice = typeof voices['English US'][keyof typeof voices['English US']]
-type EnglishUKVoice = typeof voices['English UK'][keyof typeof voices['English UK']]
-type EnglishAUVoice = typeof voices['English AU'][keyof typeof voices['English AU']]
-type FrenchVoice = typeof voices['French'][keyof typeof voices['French']]
-type GermanVoice = typeof voices['German'][keyof typeof voices['German']]
-type SpanishVoice = typeof voices['Spanish'][keyof typeof voices['Spanish']]
-type SpanishMXVoice = typeof voices['Spanish MX'][keyof typeof voices['Spanish MX']]
-type PortugueseBRVoice = typeof voices['Portuguese BR'][keyof typeof voices['Portuguese BR']]
-type IndonesianVoice = typeof voices['Indonesian'][keyof typeof voices['Indonesian']]
-type JapaneseVoice = typeof voices['Japanese'][keyof typeof voices['Japanese']]
-type KoreanVoice = typeof voices['Korean'][keyof typeof voices['Korean']]
-type CharactersVoice = typeof voices['Characters'][keyof typeof voices['Characters']]
-type SingingVoice = typeof voices['Singing'][keyof typeof voices['Singing']]
+type VoiceCategory = keyof typeof voiceLookup
+
+type EnglishUSVoiceName = keyof typeof voiceLookup['English US']
+type EnglishUKVoiceName = keyof typeof voiceLookup['English UK']
+type EnglishAUVoiceName = keyof typeof voiceLookup['English AU']
+type FrenchVoiceName = keyof typeof voiceLookup['French']
+type GermanVoiceName = keyof typeof voiceLookup['German']
+type SpanishVoiceName = keyof typeof voiceLookup['Spanish']
+type SpanishMXVoiceName = keyof typeof voiceLookup['Spanish MX']
+type PortugueseBRVoiceName = keyof typeof voiceLookup['Portuguese BR']
+type IndonesianVoiceName = keyof typeof voiceLookup['Indonesian']
+type JapaneseVoiceName = keyof typeof voiceLookup['Japanese']
+type KoreanVoiceName = keyof typeof voiceLookup['Korean']
+type CharactersVoiceName = keyof typeof voiceLookup['Characters']
+type VoiceName =
+  | EnglishUSVoiceName
+  | EnglishUKVoiceName
+  | EnglishAUVoiceName
+  | FrenchVoiceName
+  | GermanVoiceName
+  | SpanishVoiceName
+  | SpanishMXVoiceName
+  | PortugueseBRVoiceName
+  | IndonesianVoiceName
+  | JapaneseVoiceName
+  | KoreanVoiceName
+  | CharactersVoiceName
+
+type EnglishUSVoice = typeof voiceLookup['English US'][EnglishUSVoiceName]
+type EnglishUKVoice = typeof voiceLookup['English UK'][EnglishUKVoiceName]
+type EnglishAUVoice = typeof voiceLookup['English AU'][EnglishAUVoiceName]
+type FrenchVoice = typeof voiceLookup['French'][FrenchVoiceName]
+type GermanVoice = typeof voiceLookup['German'][GermanVoiceName]
+type SpanishVoice = typeof voiceLookup['Spanish'][SpanishVoiceName]
+type SpanishMXVoice = typeof voiceLookup['Spanish MX'][SpanishMXVoiceName]
+type PortugueseBRVoice = typeof voiceLookup['Portuguese BR'][PortugueseBRVoiceName]
+type IndonesianVoice = typeof voiceLookup['Indonesian'][IndonesianVoiceName]
+type JapaneseVoice = typeof voiceLookup['Japanese'][JapaneseVoiceName]
+type KoreanVoice = typeof voiceLookup['Korean'][KoreanVoiceName]
+type CharactersVoice = typeof voiceLookup['Characters'][CharactersVoiceName]
+// type SingingVoice = typeof voiceLookup['Singing'][keyof typeof voiceLookup['Singing']]
 type Voice =
   | EnglishUSVoice
   | EnglishUKVoice
@@ -98,9 +125,22 @@ type Voice =
   | JapaneseVoice
   | KoreanVoice
   | CharactersVoice
-  | SingingVoice
+// | SingingVoice
 
-const voiceList = values(voices).reduce<Voice[]>((acc, subVoices) => [...acc, ...values(subVoices)], [])
+const voices = values(voiceLookup).reduce<Voice[]>((acc, subVoices) => [...acc, ...values(subVoices)], [])
+
+const reverseVoiceLookup = (voice: Voice): [VoiceCategory, VoiceName] => {
+  for (const category in voiceLookup) {
+    const voiceByName = voiceLookup[category as VoiceCategory]!
+    for (const name in voiceByName) {
+      // nested key type definitions are messy
+      if ((voiceByName as any)[name] === voice) {
+        return [category as VoiceCategory, name as VoiceName]
+      }
+    }
+  }
+  throw new Error('TypeScript bypassed')
+}
 
 const playAudio = (base64: string, volume = 1.0) =>
   new Promise(resolve => {
@@ -110,9 +150,8 @@ const playAudio = (base64: string, volume = 1.0) =>
     audio.play()
   })
 
-const textToSpeech = async (text: string, volume: number) => {
+const textToSpeech = async (text: string, volume: number, voice: Voice) => {
   const ENDPOINT = 'https://tiktok-tts.weilnet.workers.dev'
-  const voice = voices['English US']['Female']
 
   try {
     const resp = await fetch(`${ENDPOINT}/api/generation`, {
@@ -135,4 +174,4 @@ const textToSpeech = async (text: string, volume: number) => {
 }
 
 export type { VoiceCategory, Voice }
-export { voices, voiceList, textToSpeech }
+export { voiceLookup, voices, reverseVoiceLookup, textToSpeech }

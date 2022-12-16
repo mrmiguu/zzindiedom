@@ -37,6 +37,7 @@ type GameProps = { myPlayer: DB_Player }
 
 function Game({ myPlayer }: GameProps) {
   const myId = myPlayer.id
+  const myVoice = myPlayer.voice
   const mapId = myPlayer.map_id
   const perspective = 1024
   const cameraAngle = 75
@@ -154,7 +155,7 @@ function Game({ myPlayer }: GameProps) {
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
     const justify = myMsg ? 'justify-end' : 'justify-start'
 
-    await textToSpeech(msg, volume / 5)
+    await textToSpeech(msg, volume / 5, myVoice)
 
     toast(
       <div className={`w-full flex ${justify}`} style={{ opacity: volume }}>

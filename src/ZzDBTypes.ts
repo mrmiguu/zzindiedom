@@ -1,8 +1,11 @@
+import { Voice } from "./ZzTTS"
+
 type DB_Player = {
   id: string
   name: string
   sprite_emoji: string
   sprite_hue_rotate: number
+  voice: Voice
   exp: number
   map_id: string
   party_id: string | null
