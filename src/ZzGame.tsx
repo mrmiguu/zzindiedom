@@ -28,7 +28,7 @@ import Particles from './ZzParticles'
 import PieceBadge from './ZzPieceBadge'
 import { christmasMountainScenerySprites, playerSprites } from './ZzSprites'
 import TileCarousel, { mapSizes } from './ZzTileCarousel'
-import { textToSpeech } from './ZzTTS'
+import { textToSpeech, Voice } from './ZzTTS'
 import { GameEvent, GameState, PieceState } from './ZzTypes'
 
 enablePatches()
@@ -37,7 +37,6 @@ type GameProps = { myPlayer: DB_Player }
 
 function Game({ myPlayer }: GameProps) {
   const myId = myPlayer.id
-  const myVoice = myPlayer.voice
   const mapId = myPlayer.map_id
   const perspective = 1024
   const cameraAngle = 75
@@ -143,6 +142,7 @@ function Game({ myPlayer }: GameProps) {
     hueRotate: number | undefined,
     name: string,
     msg: string,
+    voice: Voice,
     volume = 1.0,
   ) => {
     const myMsg = uid === myId
@@ -155,7 +155,7 @@ function Game({ myPlayer }: GameProps) {
     const msgTheme = myMsg ? 'bg-[#0154CC] text-white' : 'bg-white'
     const justify = myMsg ? 'justify-end' : 'justify-start'
 
-    await textToSpeech(msg, volume / 5, myVoice)
+    await textToSpeech(msg, volume / 5, voice)
 
     toast(
       <div className={`w-full flex ${justify}`} style={{ opacity: volume }}>
@@ -194,6 +194,7 @@ function Game({ myPlayer }: GameProps) {
               level: event.exp,
               sprite: event.sprite_emoji,
               hueRotate: event.sprite_hue_rotate,
+              voice: event.voice,
               x: 0,
               xTimestamp: 0,
             }
@@ -247,7 +248,7 @@ function Game({ myPlayer }: GameProps) {
             const theirX = clampN(piece.x, mapSize)
             const myX = clampN(myPiece?.x ?? piece.x, mapSize)
             const distVol = carouselDistanceVolume(myX, theirX, mapSize)
-            sendChat(event.player_id, piece.sprite, piece.hueRotate, piece.name, event.msg, distVol)
+            sendChat(event.player_id, piece.sprite, piece.hueRotate, piece.name, event.msg, piece.voice, distVol)
           }
           break
 

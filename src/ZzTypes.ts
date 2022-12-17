@@ -1,5 +1,6 @@
 import { CSSProperties } from 'react'
 import { DB_ChatMessage, DB_Map, DB_Player, DB_PlayerPosition } from './ZzDBTypes'
+import { Voice } from './ZzTTS'
 
 type GameState = {
   pieces: { [id: string]: PieceState | EntityState | BeastState | PlayerState }
@@ -28,6 +29,7 @@ type BeastState = EntityState & {
 
 type PlayerState = BeastState & {
   name: string
+  voice: Voice
 }
 
 type EventSetPlayer = { type: 'set_player' } & DB_Player
