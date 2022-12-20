@@ -520,7 +520,7 @@ function Game({ myPlayer }: GameProps) {
                               <>
                                 <br />
                                 {itemEntries.map(([item, count]) => (
-                                  <span>
+                                  <span key={item}>
                                     {count}
                                     {item}{' '}
                                   </span>
